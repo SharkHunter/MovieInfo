@@ -143,9 +143,12 @@ public class IMDBPlugin implements Plugin
 			
 		if (fs > -1) {
 			while (fs < end && fs != 5) {
-				fs=sb.indexOf("alt=\"",fs);
-				castlist.add("");
+				fs=sb.indexOf("noscript>",fs);
+				fs=sb.indexOf("alt=\"",fs+8);
+				String n1=sb.substring(fs+5, sb.indexOf("\"", fs+5));
+				fs=sb.indexOf("src=\"",fs+5);
 				castlist.add(sb.substring(fs+5, sb.indexOf("\"", fs+5)));
+				castlist.add(n1);
 				/*	castlist.add(sb.substring(sb.lastIndexOf(">", sb.indexOf(
 						"</", fs)) + 1, sb.indexOf("</", fs)));*/
 				/*PMS.debug("cast1 "+sb.substring(end1+1,end2));
