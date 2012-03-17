@@ -1,26 +1,23 @@
 package net.pms.movieinfo;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.StringTokenizer;
-import net.pms.PMS;
-import net.pms.configuration.RendererConfiguration;
 import net.pms.dlna.WebVideoStream;
-import net.pms.encoders.Player;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MovieInfoTrailer extends WebVideoStream {
-
+	private static final Logger logger = LoggerFactory.getLogger(MovieInfoTrailer.class);
+	
 	public MovieInfoTrailer(String name, String thumbnailIcon, String url) {
 		super(name,url,thumbnailIcon);
-		notranscodefolder = true;
 	}
+/*
 	public Player getPlayer() {
-		player = new MEncoderVideoYoutube(PMS.getConfiguration());
-		return player;
+		setPlayer(new MEncoderVideoYoutube(PMS.getConfiguration()));
+		return getPlayer();
 	}
 	@Override
-	public InputStream getInputStream(long low, long high, double timeseek, RendererConfiguration mediaRenderer) throws IOException {
+	public InputStream getInputStream(Range range, RendererConfiguration mediarenderer) throws IOException {
+		String URL = getUrl();
 		if (URL.toLowerCase().indexOf("youtube") > -1 && URL.toLowerCase().indexOf("?") > -1) {
 			try {
 				InputStream is = downloadAndSend(URL, false);
@@ -70,10 +67,14 @@ public class MovieInfoTrailer extends WebVideoStream {
 					URL = newURL;
 				}
 			} catch (IOException e) {
-				PMS.error(null, e);
+				logger.error(null, e);
 			}
 		}
-		return super.getInputStream(low, high, timeseek, mediaRenderer);
+		return super.getInputStream(range, mediarenderer);
 	}
-
+	@Override
+	public boolean isTranscodeFolderAvailable() {
+		return false;
+	}
+*/
 }

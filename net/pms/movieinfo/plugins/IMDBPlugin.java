@@ -7,7 +7,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 
-import net.pms.PMS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class IMDBPlugin implements Plugin
 {
@@ -15,6 +16,7 @@ public class IMDBPlugin implements Plugin
 	private StringBuffer sb;
 	private ArrayList<String> castlist = new ArrayList<String>();
 	private String newURL;
+	private static final Logger logger = LoggerFactory.getLogger(IMDBPlugin.class);
 
 	public void importFile(BufferedReader in)
 	{
@@ -79,18 +81,19 @@ public class IMDBPlugin implements Plugin
 	public String getGenre()
 	{
 		int end = 0;
-		fs = sb.indexOf("Genres:</h4>");
-		fs = sb.indexOf("\">", fs) + 2;
+		fs = sb.indexOf("itemprop=\"genre\"");
+		fs = sb.indexOf(">", fs) + 1;
 	/*	end = sb.indexOf("<a class=", fs) + 2;
 		if (end > sb.indexOf("</div", fs))*/
-			end = sb.indexOf("</div", fs) - 1;
+		end = sb.indexOf("</div>", fs);
 		String genre = null;
 		if (fs > -1 && end > -1) {
 			genre = "";
 			while (fs < end) {
-				genre = genre + sb.substring(fs, sb.indexOf("</a", fs))
-						+ "  ";
-				fs = sb.indexOf("\">", fs) + 2;
+				genre = genre + sb.substring(fs, sb.indexOf("</a>", fs));
+				fs = sb.indexOf(" >", fs) + 2;
+				if (fs < end)
+					genre = genre + ", ";
 			}
 		}
 		return genre;
@@ -106,29 +109,29 @@ public class IMDBPlugin implements Plugin
 	}
 	@Override
 	public String getAgeRating() {
-		fs = sb.indexOf("MPAA</a>)</h4>");
+		fs = sb.indexOf("itemprop=\"contentRating\">");
 		String agerating = null;
 		if (fs > -1) {
-			agerating = sb.substring(fs + 14, sb.indexOf("<", fs + 14));
+			agerating = sb.substring(fs + 25, sb.indexOf("<", fs + 25));
 		}
 		return agerating;
 	}
 	public String getRating()
 	{
-		fs = sb.indexOf("Users rated this ");
+		fs = sb.indexOf("itemprop=\"ratingValue\">");
 		String rating = null;
 		if (fs > -1) {
-			rating = sb.substring(fs+17,sb.indexOf("-", fs+17));
+			rating = sb.substring(fs+23,sb.indexOf("<", fs+23)) + "/10";
 		}
 		return rating;
 	}
 	public String getVideoThumbnail()
 	{
-		fs = sb.indexOf("name=\"poster\"");
+		fs = sb.indexOf("id=\"img_primary\"");
 		String thumb = null;
 		if (fs > -1) {
-			thumb = sb.substring(sb.indexOf("src=", fs) + 5, sb.indexOf(
-					"/></a>", fs) - 2);
+			fs=sb.indexOf("src=\"",fs+16);
+			thumb = sb.substring(fs+5, sb.indexOf("\"", fs+5));
 		}
 		return thumb;
 	}
@@ -136,38 +139,28 @@ public class IMDBPlugin implements Plugin
 	{
 		fs = sb.indexOf("class=\"cast_list\"");
 		int end = sb.indexOf("</table", fs);
-		int end1 = 0;String tmp = "";
+		int end1 = 0;
 		
 		if (fs > -1)
 			fs = sb.indexOf("<img", fs) + 4;
 			
 		if (fs > -1) {
 			while (fs < end && fs != 5) {
-				fs=sb.indexOf("noscript>",fs);
-				fs=sb.indexOf("alt=\"",fs+8);
+				// name
+				fs=sb.indexOf("alt=\"",fs);
 				String n1=sb.substring(fs+5, sb.indexOf("\"", fs+5));
-				fs=sb.indexOf("src=\"",fs+5);
+				// image
+				fs=sb.indexOf("src=\"",fs);
 				castlist.add(sb.substring(fs+5, sb.indexOf("\"", fs+5)));
 				castlist.add(n1);
-				/*	castlist.add(sb.substring(sb.lastIndexOf(">", sb.indexOf(
-						"</", fs)) + 1, sb.indexOf("</", fs)));*/
-				/*PMS.debug("cast1 "+sb.substring(end1+1,end2));
-				castlist.add(sb.substring(end1+1,end2));*/
-			//	fs = sb.indexOf("class=\"char\"", fs) + 13;
-				fs = sb.indexOf("/ch", fs+5);
-				end1=sb.indexOf(">",fs+3);
-				int end2=sb.indexOf("<",end1);
+				// character
+				fs = sb.indexOf("class=\"character\"", fs + 5);
+				fs = sb.indexOf("<div>", fs + 17);
+				// work backwards from first close tag because div contents could be either plain text or <a>
+				int end2 = sb.indexOf("</", fs + 5);
+				end1 = sb.lastIndexOf(">", end2);
 				if(end1>0&&end2>0)
 					castlist.add(sb.substring(end1+1,end2));
-				/*fs=sb.indexOf("<div>",fs+5);
-				end1 = sb.indexOf("</div>", fs+5);
-				tmp=sb.substring(fs,end1);
-				if (tmp != null)
-				{
-				castlist.add(tmp.replaceAll("<a href=\"/character/.*?/\">", "").replaceAll("</a>", ""));
-				}
-				else castlist.add(tmp);
-//				fs = sb.indexOf("<img src=\"", fs) + 10;*/
 				fs=sb.indexOf("<img",fs)+4;
 			}
 
@@ -235,7 +228,7 @@ public class IMDBPlugin implements Plugin
 			return page.substring(id,end);
 		}
 		catch (Exception e) {
-			PMS.debug("error "+e);
+			logger.debug("error "+e);
 			return null;
 		}
 	}
