@@ -31,93 +31,120 @@ public class CSFDPlugin implements Plugin
 	}
 	public String getTitle() 
 	{
-		if(sb != null)
-		fs = sb.indexOf("<title>");
 		String title = null;
-		if (fs > -1) {
-			title = sb.substring(fs + 7, sb.indexOf("</title>", fs));
-
-			title = title.replace("CSFD.cz - ", "");
-		if (title.contains("404 Not Found"))title=null;
+		if(sb != null) {
+			fs = sb.indexOf("<title>");
+			if (fs > -1) {
+				title = sb.substring(fs + 7, sb.indexOf("</title>", fs));
+				title = title.replace(" | ČSFD.cz", "");
+			}
+			if (title != null)
+				if (title.contains("404 Not Found")) title=null;
 		}
 		return title;
 	}
 	public String getPlot()
 	{
-		fs = sb.indexOf("<div style='float:left;width:425px;padding-top:10px;font-weight:normal'>");
+		fs = sb.indexOf("alt=\"Odrážka\"");
 		String plot = null;
 		if (fs > -1) {
-			plot = sb.substring(fs + 72, sb.indexOf("<b>", fs + 72));
+			plot = sb.substring(sb.indexOf(">",fs)+1, sb.indexOf("<span class=\"source", fs + 13));
+			
 			plot = plot.trim();
 		}
 		return plot;
 	}
 	public String getDirector()
 	{
-		return null;
+		fs = sb.indexOf("<h4>Režie:</h4>");
+		String dir = null;
+		if (fs > -1) {
+			fs = sb.indexOf(">", fs + 46) + 1;
+			int enditem = fs;
+			int end = sb.indexOf("</a>	", fs);
+			dir = "";
+			while (enditem != end) {
+				enditem = sb.indexOf("</a>", fs);
+				dir += sb.substring(fs, enditem);
+				if (enditem != end) {
+					fs = sb.indexOf(">", enditem + 4) + 1;
+					dir += ", ";
+				}
+			}
+			dir = dir.trim();
+   		}
+		return dir;
 	}
 	public String getGenre()
 	{
-		int end = 0;
-	    int end2 =-1; 
-	    	fs = sb.indexOf("style='color:#000000;font-weight:bold;font-size:12px'>");
-	    	if (fs > -1)
-			fs = sb.indexOf("<br>   <b> ",fs);
-	    	if (fs > -1)
-	    	{
-			fs = sb.indexOf("b> ", fs) + 3;
-			end = sb.indexOf("&nbsp;", fs);
-	        end2 = sb.indexOf("<BR>", fs);
-	    	}
-			String genre = null;
-			if (end > end2) return null;
-			if (fs > -1) {
-				genre = sb.substring(fs, end);
-			}
-			return genre;
+		fs = sb.indexOf("<p class=\"genre\">");
+		String genre = null;
+		if (fs > -1) {
+			genre = sb.substring(fs + 17, sb.indexOf("</p>", fs + 17));
+   			genre = genre.trim();
+		}
+		return genre;
 	}
 	public String getTagline()
 	{
-		return null;
+		fs = sb.indexOf("<p class=\"origin\">");
+		String tagline = null;
+		if (fs > -1) {
+			tagline = sb.substring(fs + 18, sb.indexOf("</p>", fs + 18));
+			tagline = tagline.trim();
+		}
+		return tagline;
 	}
 	public String getRating()
 	{
-		fs = sb.indexOf("<td style='padding:10px;text-align:center;font-weight:bold;font-size:36px;color:white;background-color:#");
-		
+		fs = sb.indexOf("<h2 class=\"average\">");
 		String rating = null;
 		if (fs > -1) {
-			rating = sb.substring(fs + 112, sb.indexOf(
-					"</", fs+112));
-		
-		if (rating.trim().matches("[0-9]{0,1}[0-9]\\%"))
-		rating = (Double.parseDouble(rating.trim().replace("%", ""))/10) + "";
-		
-		rating = rating + "/10";
+			rating = sb.substring(fs + 20, sb.indexOf("</h2>", fs + 20));
+			if (rating.trim().matches("[0-9]{0,1}[0-9]\\%"))
+				rating = (Double.parseDouble(rating.trim().replace("%", ""))/10) + "";
+			rating = rating + "/10";
 		}
 		return rating;
 	}
 	public String getVideoThumbnail()
 	{
-		fs = sb.indexOf("<table background=");
+		fs = sb.indexOf("<meta property=\"og:image\" content=\"");
 		String thumb = null;
 		if (fs >-1){
-		thumb = sb.substring(fs+19, sb.indexOf("\"",fs+19));	
+		thumb = sb.substring(fs + 35, sb.indexOf("\"",fs + 35));	
 		}
 		return thumb;
 	}
 	public ArrayList<String> getCast()
 	{
+
+		fs = sb.indexOf("<h4>Hrají:</h4>");
+		if (fs > -1) {
+			fs = sb.indexOf(">", fs + 46) + 1;
+			int enditem = fs;
+			int end = sb.indexOf("</a>	", fs);
+			while (enditem != end) {
+				enditem = sb.indexOf("</a>", fs);
+				castlist.add("");
+				castlist.add(sb.substring(fs, enditem));
+				castlist.add("");
+				if (enditem != end) {
+					fs = sb.indexOf(">", enditem + 4) + 1;
+				}
+			}
+		}
 		return castlist;
 	}
-	public String getTvShow() {return "tv seri�l";}
+	public String getTvShow() {return "TV seriál";}
 	public String getCharSet() {return "UTF-8";}
 	public String getGoogleSearchSite()
 	{
-		return "csfd.cz/";
+		return "csfd.cz/film/";
 	}
 	public String getVideoURL()
 	{
-		return "http://www.csfd.cz/###MOVIEID###/?text=1";
+		return "http://www.csfd.cz/film/###MOVIEID###";
 	}
 	public String lookForMovieID(BufferedReader in) {
 		try {
@@ -129,19 +156,18 @@ public class CSFDPlugin implements Plugin
 			in.close();
 			content.close();
 			temp = content.toString();
-			int fs = temp.indexOf("http://www.csfd.cz/film/");
-			int end = temp.indexOf("\"", fs+19);
+			int fs = temp.indexOf("www.csfd.cz/film/");
+			int end = temp.indexOf("/", fs + 17);
 			newURL = null;
 			if (fs > -1) {
-				newURL = temp.substring(fs + 19, end);
+				newURL = temp.substring(fs + 17, end + 1);
 			}
 			if (newURL != null)
 			{
 				fs = newURL.indexOf("?");
 				if (fs > -1)
 					newURL = newURL.substring(0,fs);
-			}
-			
+			}			
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
