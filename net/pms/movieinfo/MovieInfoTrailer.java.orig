@@ -1,6 +1,15 @@
 package net.pms.movieinfo;
 
+<<<<<<< HEAD
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.StringTokenizer;
+import net.pms.PMS;
+import net.pms.configuration.RendererConfiguration;
 import net.pms.dlna.Range;
+=======
+>>>>>>> a07f89818891b130096d4f3fb4dad4a89d436d08
 import net.pms.dlna.WebVideoStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,8 +27,13 @@ public class MovieInfoTrailer extends WebVideoStream {
 	}
 	@Override
 	public InputStream getInputStream(Range range, RendererConfiguration mediarenderer) throws IOException {
+<<<<<<< HEAD
+//		public InputStream getInputStream(long low, long high, double timeseek, RendererConfiguration mediaRenderer) throws IOException {
+		if (this.getUrl().toLowerCase().indexOf("youtube") > -1 && getUrl().toLowerCase().indexOf("?") > -1) {
+=======
 		String URL = getUrl();
 		if (URL.toLowerCase().indexOf("youtube") > -1 && URL.toLowerCase().indexOf("?") > -1) {
+>>>>>>> a07f89818891b130096d4f3fb4dad4a89d436d08
 			try {
 				InputStream is = downloadAndSend(getUrl(), false);
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -71,11 +85,20 @@ public class MovieInfoTrailer extends WebVideoStream {
 				logger.error(null, e);
 			}
 		}
-		return super.getInputStream(range, mediarenderer);
+<<<<<<< HEAD
+	//	return super.getInputStream(low, high, timeseek, mediaRenderer);
+		return super.getInputStream(range,mediarenderer);
 	}
 	
 	public boolean isTranscodeFolderAvailable() {
 		return false;
+=======
+		return super.getInputStream(range, mediarenderer);
+>>>>>>> a07f89818891b130096d4f3fb4dad4a89d436d08
 	}
-
+	@Override
+	public boolean isTranscodeFolderAvailable() {
+		return false;
+	}
+*/
 }

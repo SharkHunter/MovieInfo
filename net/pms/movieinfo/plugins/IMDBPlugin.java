@@ -7,7 +7,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 
-import net.pms.PMS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class IMDBPlugin implements Plugin
 {
@@ -15,6 +16,7 @@ public class IMDBPlugin implements Plugin
 	private StringBuffer sb;
 	private ArrayList<String> castlist = new ArrayList<String>();
 	private String newURL;
+	private static final Logger logger = LoggerFactory.getLogger(IMDBPlugin.class);
 
 	public void importFile(BufferedReader in)
 	{
@@ -79,18 +81,19 @@ public class IMDBPlugin implements Plugin
 	public String getGenre()
 	{
 		int end = 0;
-		fs = sb.indexOf("Genres:</h4>");
-		fs = sb.indexOf("\">", fs) + 2;
+		fs = sb.indexOf("itemprop=\"genre\"");
+		fs = sb.indexOf(">", fs) + 1;
 	/*	end = sb.indexOf("<a class=", fs) + 2;
 		if (end > sb.indexOf("</div", fs))*/
-			end = sb.indexOf("</div", fs) - 1;
+		end = sb.indexOf("</div>", fs);
 		String genre = null;
 		if (fs > -1 && end > -1) {
 			genre = "";
 			while (fs < end) {
-				genre = genre + sb.substring(fs, sb.indexOf("</a", fs))
-						+ "  ";
-				fs = sb.indexOf("\">", fs) + 2;
+				genre = genre + sb.substring(fs, sb.indexOf("</a>", fs));
+				fs = sb.indexOf(" >", fs) + 2;
+				if (fs < end)
+					genre = genre + ", ";
 			}
 		}
 		return genre;
@@ -136,7 +139,7 @@ public class IMDBPlugin implements Plugin
 	{
 		fs = sb.indexOf("class=\"cast_list\"");
 		int end = sb.indexOf("</table", fs);
-		int end1 = 0;String tmp = "";
+		int end1 = 0;
 		
 		if (fs > -1)
 			fs = sb.indexOf("<img", fs) + 4;
@@ -225,7 +228,7 @@ public class IMDBPlugin implements Plugin
 			return page.substring(id,end);
 		}
 		catch (Exception e) {
-			PMS.debug("error "+e);
+			logger.debug("error "+e);
 			return null;
 		}
 	}

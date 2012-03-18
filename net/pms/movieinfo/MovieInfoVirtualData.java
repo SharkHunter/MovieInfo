@@ -14,10 +14,13 @@ import net.pms.PMS;
 import net.pms.dlna.virtual.VirtualFolder;
 import net.pms.io.OutputParams;
 import net.pms.io.ProcessWrapperImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MovieInfoVirtualData extends VirtualFolder {
 
 	private boolean done = false;
+	private static final Logger logger = LoggerFactory.getLogger(MovieInfoVirtualData.class);
 
 	public MovieInfoVirtualData(String thumbnailIcon) {
 		super(MovieInfoVirtualFolder.MOVIE_FOLDER, thumbnailIcon);
@@ -47,6 +50,11 @@ public class MovieInfoVirtualData extends VirtualFolder {
 		return -1; //DLNAMediaInfo.TRANS_SIZE;
 	}
 
+	@Override
+	public boolean isTranscodeFolderAvailable() {
+		return false;
+	}
+
 	public long lastModified() {
 		return 0;
 	}
@@ -58,7 +66,7 @@ public class MovieInfoVirtualData extends VirtualFolder {
 	private String getFfmpegPath() {
 		String value = PMS.getConfiguration().getFfmpegPath();
 		if (value == null) {
-			PMS.minimal("No ffmpeg - unable to thumbnail");
+			logger.trace("No ffmpeg - unable to thumbnail");
 			throw new RuntimeException("No ffmpeg - unable to thumbnail");
 		} else {
 			return value;
