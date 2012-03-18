@@ -21,12 +21,10 @@ public class MovieInfoVirtualData extends VirtualFolder {
 
 	public MovieInfoVirtualData(String thumbnailIcon) {
 		super(MovieInfoVirtualFolder.MOVIE_FOLDER, thumbnailIcon);
-		notranscodefolder = true;
 	}
 
 	public MovieInfoVirtualData(String name, String thumbnailIcon) {
 		super(name, thumbnailIcon);
-		notranscodefolder = true;
 	}
 	public boolean isFolder(){
 		return false;
@@ -38,6 +36,10 @@ public class MovieInfoVirtualData extends VirtualFolder {
 	@Override
 	public String getName() {
 		return name;
+	}
+	
+	public boolean isTranscodeFolderAvailable() {
+		return false;
 	}
 
 	@Override

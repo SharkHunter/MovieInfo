@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.util.StringTokenizer;
 import net.pms.PMS;
 import net.pms.configuration.RendererConfiguration;
+import net.pms.dlna.Range;
 import net.pms.dlna.WebVideoStream;
 import net.pms.encoders.Player;
 
@@ -13,17 +14,17 @@ public class MovieInfoTrailer extends WebVideoStream {
 
 	public MovieInfoTrailer(String name, String thumbnailIcon, String url) {
 		super(name,url,thumbnailIcon);
-		notranscodefolder = true;
 	}
 	public Player getPlayer() {
 		player = new MEncoderVideoYoutube(PMS.getConfiguration());
 		return player;
 	}
 	@Override
-	public InputStream getInputStream(long low, long high, double timeseek, RendererConfiguration mediaRenderer) throws IOException {
-		if (URL.toLowerCase().indexOf("youtube") > -1 && URL.toLowerCase().indexOf("?") > -1) {
+	public InputStream getInputStream(Range range, RendererConfiguration mediarenderer) throws IOException {
+//		public InputStream getInputStream(long low, long high, double timeseek, RendererConfiguration mediaRenderer) throws IOException {
+		if (this.getUrl().toLowerCase().indexOf("youtube") > -1 && getUrl().toLowerCase().indexOf("?") > -1) {
 			try {
-				InputStream is = downloadAndSend(URL, false);
+				InputStream is = downloadAndSend(getUrl(), false);
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
 				int n = -1;
 				byte buffer [] = new byte [4096];
@@ -67,13 +68,18 @@ public class MovieInfoTrailer extends WebVideoStream {
 						}
 						newURL = newURL.replace("=", "%3D");
 					}
-					URL = newURL;
+					setUrl(newURL);
 				}
 			} catch (IOException e) {
 				PMS.error(null, e);
 			}
 		}
-		return super.getInputStream(low, high, timeseek, mediaRenderer);
+	//	return super.getInputStream(low, high, timeseek, mediaRenderer);
+		return super.getInputStream(range,mediarenderer);
+	}
+	
+	public boolean isTranscodeFolderAvailable() {
+		return false;
 	}
 
 }

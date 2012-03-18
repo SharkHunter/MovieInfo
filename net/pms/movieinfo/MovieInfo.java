@@ -41,8 +41,10 @@ public class MovieInfo implements AdditionalResourceFolderListener {
 	private String Filter="filter";
 	
 	public void addAdditionalFolder(DLNAResource currentResource, DLNAResource child) {
-		if(currentResource instanceof MovieInfoVirtualFolder)
+		if(!(child instanceof net.pms.dlna.RealFile))
 			return;
+		/*if(currentResource instanceof MovieInfoVirtualFolder)
+			return;*/
 		ResourceExtension ext = new ResourceExtension(currentResource);
 		ext.addChild(child);
 	}
