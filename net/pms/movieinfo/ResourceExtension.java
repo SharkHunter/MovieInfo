@@ -91,5 +91,9 @@ public class ResourceExtension {
 		} else
 			logger.trace("MOVIEINFO.conf file not found!");
 	}
+	
+	public DLNAResource getOriginal() {
+		return original;
+	}
 
 }

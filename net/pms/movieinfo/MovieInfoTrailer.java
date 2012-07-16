@@ -77,5 +77,6 @@ public class MovieInfoTrailer extends WebVideoStream {
 	public boolean isTranscodeFolderAvailable() {
 		return false;
 	}
+	*/
 
 }

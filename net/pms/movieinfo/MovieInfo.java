@@ -4,11 +4,14 @@ import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 
 import net.pms.dlna.DLNAResource;
+import net.pms.dlna.RealFile;
 import net.pms.external.AdditionalResourceFolderListener;
 
 import java.awt.Font;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.JTextField;
 
@@ -41,12 +44,34 @@ public class MovieInfo implements AdditionalResourceFolderListener {
 	private String Filter="filter";
 	
 	public void addAdditionalFolder(DLNAResource currentResource, DLNAResource child) {
-		if(!(child instanceof net.pms.dlna.RealFile))
-			return;
-		/*if(currentResource instanceof MovieInfoVirtualFolder)
+		if(child instanceof RealFile) {
+			RealFile rf=(RealFile)child;
+			String imdb=extractImdb(rf);
+			/*if(currentResource instanceof MovieInfoVirtualFolder)
 			return;*/
-		ResourceExtension ext = new ResourceExtension(currentResource);
-		ext.addChild(child);
+			ResourceExtension ext = new ResourceExtension(currentResource,imdb);
+			ext.addChild(child);
+		}
+	}
+	
+	public static String extractImdb(DLNAResource res) {
+		if(res instanceof RealFile) 
+			return extractImdb((RealFile)res);
+		else
+			return null;
+	}
+	
+	public static String extractImdb(RealFile file) {
+		String fName=file.getFile().getAbsolutePath();
+		Pattern re=Pattern.compile("_imdb([^_]+)_");
+		Matcher m=re.matcher(fName);
+		String ret="";
+		while(m.find()) {
+			ret=m.group(1);
+			if(!ret.startsWith("tt"))
+				ret="tt"+ret;
+		}
+		return ret;
 	}
 	
 	@Override

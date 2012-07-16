@@ -22,6 +22,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
+import net.pms.dlna.DLNAResource;
 import net.pms.dlna.virtual.VirtualFolder;
 import net.pms.movieinfo.plugins.Plugin;
 
@@ -61,6 +62,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	private String nfoId;
 	private String trailer;
 	private String cookie;
+	private DLNAResource origRes;
 
 	private int cellwrap = 0;
 	private boolean showtags = true;
@@ -76,6 +78,9 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	@Override
 	public void resolve() {
 		super.resolve();
+			
+		if(nfoId ==  null)
+			nfoId=MovieInfo.extractImdb(origRes);
 		
 		if (!resolved && getChildren().size() == 0) {
 			getConfig();
@@ -746,6 +751,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 		className = name;
 		nfoId = r.imdbId;
 		thumbfolder = r.thumbfolder;
+		origRes = r.getOriginal();
 	}
 
 }

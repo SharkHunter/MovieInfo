@@ -40,10 +40,6 @@ public class MovieInfoVirtualData extends VirtualFolder {
 	public String getName() {
 		return name;
 	}
-	
-	public boolean isTranscodeFolderAvailable() {
-		return false;
-	}
 
 	@Override
 	public long length() {
