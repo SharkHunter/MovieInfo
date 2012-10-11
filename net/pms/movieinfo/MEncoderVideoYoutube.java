@@ -138,4 +138,9 @@ public class MEncoderVideoYoutube extends Player {
 		return launchTranscode(arg0,arg2,arg3);
 	}
 
+	@Override
+	public boolean isCompatible(DLNAResource arg0) {
+		return false;
+	}
+
 }
