@@ -1,0 +1,763 @@
+From 9c24872a070ae92bc589640ace13134f47f46bfe Mon Sep 17 00:00:00 2001
+From: infidel <aval57@yahoo.com>
+Date: Mon, 14 Nov 2011 12:45:11 -0500
+Subject: [PATCH 1/6] Sync with PMS 1.5.0
+
+---
+ net/pms/movieinfo/MovieInfoTrailer.java     |   11 ++++++++---
+ net/pms/movieinfo/MovieInfoVirtualData.java |    7 +++++--
+ net/pms/movieinfo/ResourceExtension.java    |    5 ++---
+ 3 files changed, 15 insertions(+), 8 deletions(-)
+
+diff --git a/net/pms/movieinfo/MovieInfoTrailer.java b/net/pms/movieinfo/MovieInfoTrailer.java
+index 993f50e..cbebec4 100644
+--- a/net/pms/movieinfo/MovieInfoTrailer.java
++++ b/net/pms/movieinfo/MovieInfoTrailer.java
+@@ -8,19 +8,20 @@ import net.pms.PMS;
+ import net.pms.configuration.RendererConfiguration;
+ import net.pms.dlna.WebVideoStream;
+ import net.pms.encoders.Player;
++import net.pms.dlna.Range;
+ 
+ public class MovieInfoTrailer extends WebVideoStream {
+ 
+ 	public MovieInfoTrailer(String name, String thumbnailIcon, String url) {
+ 		super(name,url,thumbnailIcon);
+-		notranscodefolder = true;
+ 	}
+ 	public Player getPlayer() {
+ 		player = new MEncoderVideoYoutube(PMS.getConfiguration());
+ 		return player;
+ 	}
+ 	@Override
+-	public InputStream getInputStream(long low, long high, double timeseek, RendererConfiguration mediaRenderer) throws IOException {
++	public InputStream getInputStream(Range range, RendererConfiguration mediarenderer) throws IOException {
++		String URL = getUrl();
+ 		if (URL.toLowerCase().indexOf("youtube") > -1 && URL.toLowerCase().indexOf("?") > -1) {
+ 			try {
+ 				InputStream is = downloadAndSend(URL, false);
+@@ -73,7 +74,11 @@ public class MovieInfoTrailer extends WebVideoStream {
+ 				PMS.error(null, e);
+ 			}
+ 		}
+-		return super.getInputStream(low, high, timeseek, mediaRenderer);
++		return super.getInputStream(range, mediarenderer);
++	}
++	@Override
++	public boolean isTranscodeFolderAvailable() {
++		return false;
+ 	}
+ 
+ }
+diff --git a/net/pms/movieinfo/MovieInfoVirtualData.java b/net/pms/movieinfo/MovieInfoVirtualData.java
+index f6d8e45..6084484 100644
+--- a/net/pms/movieinfo/MovieInfoVirtualData.java
++++ b/net/pms/movieinfo/MovieInfoVirtualData.java
+@@ -21,12 +21,10 @@ public class MovieInfoVirtualData extends VirtualFolder {
+ 
+ 	public MovieInfoVirtualData(String thumbnailIcon) {
+ 		super(MovieInfoVirtualFolder.MOVIE_FOLDER, thumbnailIcon);
+-		notranscodefolder = true;
+ 	}
+ 
+ 	public MovieInfoVirtualData(String name, String thumbnailIcon) {
+ 		super(name, thumbnailIcon);
+-		notranscodefolder = true;
+ 	}
+ 	public boolean isFolder(){
+ 		return false;
+@@ -45,6 +43,11 @@ public class MovieInfoVirtualData extends VirtualFolder {
+ 		return -1; //DLNAMediaInfo.TRANS_SIZE;
+ 	}
+ 
++	@Override
++	public boolean isTranscodeFolderAvailable() {
++		return false;
++	}
++
+ 	public long lastModified() {
+ 		return 0;
+ 	}
+diff --git a/net/pms/movieinfo/ResourceExtension.java b/net/pms/movieinfo/ResourceExtension.java
+index 78ba807..7430be1 100644
+--- a/net/pms/movieinfo/ResourceExtension.java
++++ b/net/pms/movieinfo/ResourceExtension.java
+@@ -27,7 +27,7 @@ public class ResourceExtension {
+ 	}
+ 	
+ 	public void addChild(DLNAResource child) {
+-		if (child.getExt().isVideo() && (!child.isNotranscodefolder())) {
++		if (child.getExt().isVideo() && child.isTranscodeFolderAvailable()) {
+ 			VirtualFolder vf2 = null;
+ 			for(DLNAResource r:original.getChildren()) {
+ 				if (r instanceof MovieInfoVirtualFolder) {
+@@ -37,8 +37,7 @@ public class ResourceExtension {
+ 			}
+ 			if (vf2 == null) {
+ 				vf2 = new MovieInfoVirtualFolder(null);
+-				original.getChildren().add(vf2);
+-				vf2.setParent( original );
++				original.addChild(vf2);
+ 			}
+ 			VirtualFolder fileFolder2 = new MovieInfoVirtualFolder(child.getName(), null);
+ 			getOptions();
+-- 
+1.7.5.4
+
+
+From a6b3795347ef5d049adc9683c3534d72b2294e9f Mon Sep 17 00:00:00 2001
+From: infidel <aval57@yahoo.com>
+Date: Mon, 14 Nov 2011 17:42:21 -0500
+Subject: [PATCH 2/6] Fixed imdb cast names. Added cellwrap (tightly wrapped
+ text) and showtags options.
+
+---
+ MOVIEINFO.conf                                    |   12 +++-
+ net/pms/movieinfo/FileMovieInfoVirtualFolder.java |  101 ++++++++++++++++-----
+ net/pms/movieinfo/ResourceExtension.java          |   13 ++-
+ net/pms/movieinfo/plugins/IMDBPlugin.java         |   30 ++----
+ 4 files changed, 106 insertions(+), 50 deletions(-)
+
+diff --git a/MOVIEINFO.conf b/MOVIEINFO.conf
+index 14df42a..760a661 100644
+--- a/MOVIEINFO.conf
++++ b/MOVIEINFO.conf
+@@ -21,6 +21,16 @@ DisplayInfo=title,rating,tagline,genre,plot,cast,director
+ ###Line length of Plot. Use Linelength=60 for 720p and 1080i/p TVs, Linelength=40 for 576p in 16:9 TVs and Linelength=20 for 576p in 4:3 TVs
+ Linelength=60
+ 
++###Line wrapping style:
++###   cellwrap=0 : the original one-row-per-cell line-wrapping style of this plugin
++###   cellwrap=3 : tightly-wrapped style, i.e wrap 3 rows of text within the height of each folder 'cell'.
++###                   Adjust this number if you see overwritten or empty areas in the output
++###                   or set it to 0 if results are weird on your renderer.
++cellwrap=0
++
++###Whether to show tag names, e.g. "Genre:" etc.
++showtags=true
++
+ ###Filter 
+ ###      Filter is case insensitive, remember to prioritize! "cd 1" should be in front of "cd"
+ ### 	 every non letter of number character is automatically removed, so if u want to filter 'cd#_1' from filename
+@@ -38,4 +48,4 @@ CleanDisplay=replace("<br>").with("");
+ CleanDisplay=replace("<br />").with("");
+ 
+ 
+-###end of config file
+\ No newline at end of file
++###end of config file
+diff --git a/net/pms/movieinfo/FileMovieInfoVirtualFolder.java b/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
+index 62c5618..9a807f5 100644
+--- a/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
++++ b/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
+@@ -20,11 +20,13 @@ import java.util.Iterator;
+ import java.util.regex.Matcher;
+ import java.util.regex.Pattern;
+ import java.util.zip.GZIPInputStream;
++import org.apache.commons.lang.WordUtils;
+ 
+ import net.pms.PMS;
+ import net.pms.dlna.WebVideoStream;
+ import net.pms.dlna.virtual.VirtualFolder;
+ import net.pms.movieinfo.plugins.Plugin;
++import net.pms.movieinfo.ResourceExtension;
+ 
+ 
+ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+@@ -58,6 +60,9 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 	private String trailer;
+ 	private String cookie;
+ 
++	private int cellwrap = 3;
++	private boolean showtags = false;
++
+ 	public FileMovieInfoVirtualFolder(String name, String thumbnailIcon, boolean copy) {
+ 		super(name, thumbnailIcon);
+ 	}
+@@ -193,7 +198,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ //			  System.out.println("dir: " + dir);
+ //			  System.out.println("genre: " + genre);
+ //			  System.out.println("tagline: " + tagline);
+-			  System.out.println("rating: " + rating);
++//			  System.out.println("rating: " + rating);
+ //			  System.out.println("votes: " + votes);
+ //			  System.out.println("thumb: " + thumb);
+ 
+@@ -203,7 +208,13 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 	private void displayTitle(MovieInfoVirtualFolder fld){
+ 		if (title != null) {
+ 			title = clean(title);
+-			fld = new MovieInfoVirtualFolder("Title: " + title, thumb);
++			if(cellwrap==0) {
++				fld = new MovieInfoVirtualFolder("Title: " + title, thumb);
++//				System.out.println("Title: " + title);
++			} else {
++				fld = new MovieInfoVirtualFolder(wrapKerned(title.toUpperCase(), 1.2), thumb);
++//				System.out.println(wrapKerned(title.toUpperCase(), 1.2));
++			}
+ 			if (thumb != null)
+ 			fld.addChild(new MovieInfoVirtualData(title, thumb.replaceAll("S[X,Y][0-9]{2,3}_S[X,Y][0-9]{2,3}_", "SX300_SY300_")));
+ 			if(cover.equals("1"))
+@@ -278,38 +289,33 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 				stars = stars + (char) 9733;
+ 			for (int i = 0; i < 10 - star; i++)
+ 				stars = stars + (char) 9734;
+-			addChild(new MovieInfoVirtualFolder("Rating: " + stars
+-					+ " " + rating , null));
+-					//+ " " + rating + " " + votes, null));
++			addInfo("Rating: ", stars + 
++				" " + rating);
+ 		}
+ 	}
+ 	private void displayGenre(MovieInfoVirtualFolder fld){
+ 		if (genre != null && genre != " ") {
+ 			genre = clean(genre);
+-			addChild(new MovieInfoVirtualFolder("Genre: " + genre,
+-					null));
++			addInfo("Genre: ", genre);
+ 		}
+ 	}
+ 	private void displayTagline(MovieInfoVirtualFolder fld){
+ 		if (tagline != null) {
+ 			tagline = clean(tagline);
+-			this.addChild(new MovieInfoVirtualFolder("Tagline: " + tagline,
+-					null));
++			addInfo("Tagline: ", tagline);
+ 		}
+ 	}
+ 	private void displayAgeRating(MovieInfoVirtualFolder fld){
+ 		if (agerating != null) {
+ 			agerating = clean(agerating);
+-			this.addChild(new MovieInfoVirtualFolder("Age Rating: " + agerating,
+-					null));
++			addInfo("Age Rating: ", agerating);
+ 		}
+ 	}
+ 	private void displayDirector(MovieInfoVirtualFolder fld){
+ 		if (dir != null) {
+ 			dir = clean(dir);
+ 			dir = dir.replaceAll("\\.\\s*$", "");
+-			this.addChild(new MovieInfoVirtualFolder("Director: " + dir,
+-					null));
++			addInfo("Director: ", dir);
+ 		}
+ 	}
+ 	private void displayPlot(MovieInfoVirtualFolder fld){
+@@ -318,18 +324,23 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 		if (plot != null) {
+ 			plot = clean(plot);
+ //			System.out.println("Plot clean = " + plot);
+-			for (int i = 0; i <= plot.length(); i = i + lineLength ) {
++			if(cellwrap > 0) {
++				addInfo("Plot: ", plot);
++			} else {
++				for (int i = 0; i <= plot.length(); i = i + lineLength ) {
+ 
+-				if (i + lineLength <= plot.length() && plot.contains(" ")) {
+-					plot1 = plot.substring(start, plot.lastIndexOf(" ",	i + lineLength));
+-					start = plot.lastIndexOf(" ", i + lineLength);
+-				} else if (i + lineLength > plot.length()) {
+-					plot1 = plot.substring(start, plot.length());
++					if (i + lineLength <= plot.length() && plot.contains(" ")) {
++						plot1 = plot.substring(start, plot.lastIndexOf(" ",	i + lineLength));
++						start = plot.lastIndexOf(" ", i + lineLength);
++					} else if (i + lineLength > plot.length()) {
++						plot1 = plot.substring(start, plot.length());
++					}
++					if (plot1.length() > 1)
++						this.addChild(new MovieInfoVirtualFolder(temp + plot1,
++								null));
++//					System.out.println(temp + plot1);
++					temp = "____ ";
+ 				}
+-				if (plot1.length() > 1)
+-					this.addChild(new MovieInfoVirtualFolder(temp + plot1,
+-							null));
+-				temp = "____ ";
+ 			}
+ 		}
+ 	}
+@@ -341,16 +352,42 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 				if(castlist.get(0) != null)
+ 				plot1 = castlist.remove(0).replaceAll("S[X,Y][0-9]{2}_S[X,Y][0-9]{2}_", "SX300_SY300_").replace("http://i.media-imdb.com/images/tn15/addtiny.gif","http://i.media-imdb.com/images/nophoto.jpg");
+ 				act = clean(castlist.remove(0));
+-				fld = (new MovieInfoVirtualFolder(temp
++				String label = (cellwrap > 0 ? "" : temp)
+ 						+ act + " as "
+-						+ clean(castlist.remove(0)), null));
++						+ clean(castlist.remove(0));
++				fld = (new MovieInfoVirtualFolder(
++						(cellwrap > 0 ? wrap(label) : label), null));
+ 				fld.addChild(new MovieInfoVirtualData(act,plot1));
+ 				addChild(fld);
++//				System.out.println(act);
+ 				temp = "____   ";
+ 			}
+ 		}
+ 	}
+ 	
++	private void addInfo(String tag, String s) {
++		if (showtags)
++			s = tag + s;
++		if (cellwrap > 0) {
++			s = wrap(s);
++			addChild(new MovieInfoVirtualFolder(s, null));
++			int blanks = (s.replaceAll("[^\n]", "").length() + cellwrap - 1) / cellwrap - 1;
++			for (int i = 0; i < blanks; i++)
++				addChild(new MovieInfoVirtualFolder("", null));
++		} else
++			addChild(new MovieInfoVirtualFolder(s, null));
++//		System.out.println(s);
++	}
++
++	private String wrapKerned(String s, double factor) {
++		int len = (int)(lineLength/factor);
++		return s.length() > len ? WordUtils.wrap(s, len, null, true) : s;
++	}	
++
++	private String wrap(String s) {
++		return s.length() > lineLength ? WordUtils.wrap(s, lineLength, null, true) : s;
++	}	
++
+ 	private String imdbIDFromNfo(String movieName) {
+ 
+ 		try {
+@@ -609,6 +646,9 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 	}
+ 	protected String getMovienameFromFilename(String displayname) {
+ 		String h = displayname;
++		h = h.split("\\.")[0];
++		h = h.replaceAll("DISC[0-9]{1,2}", "");
++		h = h.replaceAll("D[0-9]{1,2}", "");
+ 		h = h.replaceAll("\\..{2,4}$", "");
+ 		h = h.replaceAll("1080[pP]", "");
+ 		h = h.replaceAll("720[pP]", "");
+@@ -682,6 +722,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 		Iterator<String> it = cleanlist.iterator();
+ 		while (it.hasNext())s = s.replace(it.next(),it.next());
+ 
++		s = s.replaceAll("\\s+", " ").trim();
+ 		return s;
+ 	}
+ 
+@@ -703,4 +744,14 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 		nfoId=nfo;
+ 	}
+ 
++	public FileMovieInfoVirtualFolder(String name, String thumbnailIcon, ResourceExtension r) {
++		super(name, thumbnailIcon);
++		numberOfActors = r.numberOfActors;
++		lineLength = r.lineLength;
++		cellwrap = r.cellwrap;
++		showtags = r.showtags;
++		className = name;
++		nfoId=r.imdbId;
++	}
++
+ }
+diff --git a/net/pms/movieinfo/ResourceExtension.java b/net/pms/movieinfo/ResourceExtension.java
+index 7430be1..71b21d6 100644
+--- a/net/pms/movieinfo/ResourceExtension.java
++++ b/net/pms/movieinfo/ResourceExtension.java
+@@ -13,9 +13,11 @@ public class ResourceExtension {
+ 	
+ 	private DLNAResource original;
+ 	private String plugins;
+-	private int numberOfActors;
+-	private int lineLength;
+-	private String imdbId;
++	public int numberOfActors = 99;
++	public int lineLength = 60;
++	public int cellwrap = 0;
++	public boolean showtags = true;
++	public String imdbId = "";
+ 	
+ 	public ResourceExtension(DLNAResource original) {
+ 		this(original,"");
+@@ -45,7 +47,8 @@ public class ResourceExtension {
+ 				String[] plgn = plugins.split(",");
+ 				for(int i=0;i < plgn.length;i++)
+ 					if (!plgn[i].equals(","))
+-				fileFolder2.addChild(new FileMovieInfoVirtualFolder(plgn[i] +" INFO", null,numberOfActors,lineLength,imdbId));
++//				fileFolder2.addChild(new FileMovieInfoVirtualFolder(plgn[i] +" INFO", null,numberOfActors,lineLength,imdbId));
++				fileFolder2.addChild(new FileMovieInfoVirtualFolder(plgn[i] +" INFO", null,this));
+ 				vf2.addChild(fileFolder2);
+ 			}
+ 		}
+@@ -66,6 +69,8 @@ public class ResourceExtension {
+ 						if(line.startsWith("Plugins="))plugins = line.substring(line.indexOf("=")+1,line.length()).toUpperCase();
+ 						if(line.startsWith("NumberOfActors="))numberOfActors = Integer.parseInt(line.substring(line.indexOf("=")+1,line.length()));
+ 						if(line.startsWith("Linelength="))lineLength = Integer.parseInt(line.substring(line.indexOf("=")+1,line.length()));
++						if(line.startsWith("cellwrap="))cellwrap = Integer.parseInt(line.substring(line.indexOf("=")+1,line.length()));
++						if(line.startsWith("showtags="))showtags = Boolean.parseBoolean(line.substring(line.indexOf("=")+1,line.length()));
+ 					}
+ 				}
+ 				br.close();
+diff --git a/net/pms/movieinfo/plugins/IMDBPlugin.java b/net/pms/movieinfo/plugins/IMDBPlugin.java
+index adf4eac..b88fdc4 100644
+--- a/net/pms/movieinfo/plugins/IMDBPlugin.java
++++ b/net/pms/movieinfo/plugins/IMDBPlugin.java
+@@ -143,31 +143,21 @@ public class IMDBPlugin implements Plugin
+ 			
+ 		if (fs > -1) {
+ 			while (fs < end && fs != 5) {
+-				fs=sb.indexOf("noscript>",fs);
+-				fs=sb.indexOf("alt=\"",fs+8);
++				// name
++				fs=sb.indexOf("alt=\"",fs);
+ 				String n1=sb.substring(fs+5, sb.indexOf("\"", fs+5));
+-				fs=sb.indexOf("src=\"",fs+5);
++				// image
++				fs=sb.indexOf("src=\"",fs);
+ 				castlist.add(sb.substring(fs+5, sb.indexOf("\"", fs+5)));
+ 				castlist.add(n1);
+-				/*	castlist.add(sb.substring(sb.lastIndexOf(">", sb.indexOf(
+-						"</", fs)) + 1, sb.indexOf("</", fs)));*/
+-				/*PMS.debug("cast1 "+sb.substring(end1+1,end2));
+-				castlist.add(sb.substring(end1+1,end2));*/
+-			//	fs = sb.indexOf("class=\"char\"", fs) + 13;
+-				fs = sb.indexOf("/ch", fs+5);
+-				end1=sb.indexOf(">",fs+3);
+-				int end2=sb.indexOf("<",end1);
++				// character
++				fs = sb.indexOf("class=\"character\"", fs + 5);
++				fs = sb.indexOf("<div>", fs + 17);
++				// work backwards from first close tag because div contents could be either plain text or <a>
++				int end2 = sb.indexOf("</", fs + 5);
++				end1 = sb.lastIndexOf(">", end2);
+ 				if(end1>0&&end2>0)
+ 					castlist.add(sb.substring(end1+1,end2));
+-				/*fs=sb.indexOf("<div>",fs+5);
+-				end1 = sb.indexOf("</div>", fs+5);
+-				tmp=sb.substring(fs,end1);
+-				if (tmp != null)
+-				{
+-				castlist.add(tmp.replaceAll("<a href=\"/character/.*?/\">", "").replaceAll("</a>", ""));
+-				}
+-				else castlist.add(tmp);
+-//				fs = sb.indexOf("<img src=\"", fs) + 10;*/
+ 				fs=sb.indexOf("<img",fs)+4;
+ 			}
+ 
+-- 
+1.7.5.4
+
+
+From 6db46217efead5629de492663aa530f34008e6b3 Mon Sep 17 00:00:00 2001
+From: infidel <aval57@yahoo.com>
+Date: Thu, 17 Nov 2011 10:38:49 -0500
+Subject: [PATCH 3/6] Enabled covers
+
+---
+ net/pms/movieinfo/FileMovieInfoVirtualFolder.java |   11 ++++++++++-
+ net/pms/movieinfo/ResourceExtension.java          |    7 +++++++
+ net/pms/movieinfo/plugins/IMDBPlugin.java         |    6 +++---
+ 3 files changed, 20 insertions(+), 4 deletions(-)
+
+diff --git a/net/pms/movieinfo/FileMovieInfoVirtualFolder.java b/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
+index 9a807f5..a9495e6 100644
+--- a/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
++++ b/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
+@@ -20,6 +20,8 @@ import java.util.Iterator;
+ import java.util.regex.Matcher;
+ import java.util.regex.Pattern;
+ import java.util.zip.GZIPInputStream;
++
++import org.apache.commons.lang.StringUtils;
+ import org.apache.commons.lang.WordUtils;
+ 
+ import net.pms.PMS;
+@@ -62,6 +64,8 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 
+ 	private int cellwrap = 3;
+ 	private boolean showtags = false;
++	private String thumbfolder = "";
++
+ 
+ 	public FileMovieInfoVirtualFolder(String name, String thumbnailIcon, boolean copy) {
+ 		super(name, thumbnailIcon);
+@@ -222,7 +226,9 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 			File f = null;
+ 			if (!isDVD && className.equals(priority))
+ 			try {
+-						f = new File((parent.getParent().getParent().getSystemName() + "\\" + parent.getName() + ".cover.jpg"));
++						f = new File((StringUtils.isNotBlank(thumbfolder) ? thumbfolder : parent.getParent().getParent().getSystemName() )
++							+ File.separator + parent.getName() + ".cover.jpg");
++//System.out.println("cover="+ f.getAbsolutePath());
+ 						if (!f.exists() && f.isAbsolute()) {
+ 							
+ 							URL url = null;
+@@ -231,6 +237,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 							if(thumb!=null)
+ 							{
+ 							url = new URL(thumb);
++//System.out.println("thumb="+thumb);
+ 							ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+ 							URLConnection conn;
+ 							conn = url.openConnection();
+@@ -750,8 +757,10 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 		lineLength = r.lineLength;
+ 		cellwrap = r.cellwrap;
+ 		showtags = r.showtags;
++		cover = r.cover;
+ 		className = name;
+ 		nfoId=r.imdbId;
++		thumbfolder = r.thumbfolder;
+ 	}
+ 
+ }
+diff --git a/net/pms/movieinfo/ResourceExtension.java b/net/pms/movieinfo/ResourceExtension.java
+index 71b21d6..86d00ed 100644
+--- a/net/pms/movieinfo/ResourceExtension.java
++++ b/net/pms/movieinfo/ResourceExtension.java
+@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
+ import net.pms.PMS;
+ import net.pms.dlna.DLNAResource;
+ import net.pms.dlna.virtual.VirtualFolder;
++import net.pms.configuration.PmsConfiguration;
+ 
+ public class ResourceExtension {
+ 	
+@@ -18,6 +19,9 @@ public class ResourceExtension {
+ 	public int cellwrap = 0;
+ 	public boolean showtags = true;
+ 	public String imdbId = "";
++	public String cover = "1";
++	private PmsConfiguration configuration;
++	public String thumbfolder = "";
+ 	
+ 	public ResourceExtension(DLNAResource original) {
+ 		this(original,"");
+@@ -43,6 +47,8 @@ public class ResourceExtension {
+ 			}
+ 			VirtualFolder fileFolder2 = new MovieInfoVirtualFolder(child.getName(), null);
+ 			getOptions();
++			configuration = PMS.getConfiguration();
++			thumbfolder = configuration.getAlternateThumbFolder();
+ 			if (plugins != null) {
+ 				String[] plgn = plugins.split(",");
+ 				for(int i=0;i < plgn.length;i++)
+@@ -71,6 +77,7 @@ public class ResourceExtension {
+ 						if(line.startsWith("Linelength="))lineLength = Integer.parseInt(line.substring(line.indexOf("=")+1,line.length()));
+ 						if(line.startsWith("cellwrap="))cellwrap = Integer.parseInt(line.substring(line.indexOf("=")+1,line.length()));
+ 						if(line.startsWith("showtags="))showtags = Boolean.parseBoolean(line.substring(line.indexOf("=")+1,line.length()));
++						if(line.startsWith("Cover="))cover = line.substring(line.indexOf("=")+1,line.length());
+ 					}
+ 				}
+ 				br.close();
+diff --git a/net/pms/movieinfo/plugins/IMDBPlugin.java b/net/pms/movieinfo/plugins/IMDBPlugin.java
+index b88fdc4..5fc1d96 100644
+--- a/net/pms/movieinfo/plugins/IMDBPlugin.java
++++ b/net/pms/movieinfo/plugins/IMDBPlugin.java
+@@ -124,11 +124,11 @@ public class IMDBPlugin implements Plugin
+ 	}
+ 	public String getVideoThumbnail()
+ 	{
+-		fs = sb.indexOf("name=\"poster\"");
++		fs = sb.indexOf("id=\"img_primary\"");
+ 		String thumb = null;
+ 		if (fs > -1) {
+-			thumb = sb.substring(sb.indexOf("src=", fs) + 5, sb.indexOf(
+-					"/></a>", fs) - 2);
++			fs=sb.indexOf("src=\"",fs+16);
++			thumb = sb.substring(fs+5, sb.indexOf("\"", fs+5));
+ 		}
+ 		return thumb;
+ 	}
+-- 
+1.7.5.4
+
+
+From f96c2f7d2556c5424e6a19b3931c0931c45ae7e7 Mon Sep 17 00:00:00 2001
+From: infidel <aval57@yahoo.com>
+Date: Fri, 18 Nov 2011 23:04:52 -0500
+Subject: [PATCH 4/6] fractional cellwrap, enable showtags in 'classic' mode
+
+---
+ MOVIEINFO.conf                                    |    4 ++--
+ net/pms/movieinfo/FileMovieInfoVirtualFolder.java |   20 +++++++++++---------
+ net/pms/movieinfo/ResourceExtension.java          |    2 +-
+ 3 files changed, 14 insertions(+), 12 deletions(-)
+
+diff --git a/MOVIEINFO.conf b/MOVIEINFO.conf
+index 760a661..b8d789f 100644
+--- a/MOVIEINFO.conf
++++ b/MOVIEINFO.conf
+@@ -24,8 +24,8 @@ Linelength=60
+ ###Line wrapping style:
+ ###   cellwrap=0 : the original one-row-per-cell line-wrapping style of this plugin
+ ###   cellwrap=3 : tightly-wrapped style, i.e wrap 3 rows of text within the height of each folder 'cell'.
+-###                   Adjust this number if you see overwritten or empty areas in the output
+-###                   or set it to 0 if results are weird on your renderer.
++###                   Adjust this number (accuracy is to tenths, e.g. 2.4) if you see overwritten or empty
++###                   areas in the output or set it to 0 if results are weird on your renderer.
+ cellwrap=0
+ 
+ ###Whether to show tag names, e.g. "Genre:" etc.
+diff --git a/net/pms/movieinfo/FileMovieInfoVirtualFolder.java b/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
+index a9495e6..2bd9396 100644
+--- a/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
++++ b/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
+@@ -62,8 +62,8 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 	private String trailer;
+ 	private String cookie;
+ 
+-	private int cellwrap = 3;
+-	private boolean showtags = false;
++	private int cellwrap = 0;
++	private boolean showtags = true;
+ 	private String thumbfolder = "";
+ 
+ 
+@@ -213,7 +213,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 		if (title != null) {
+ 			title = clean(title);
+ 			if(cellwrap==0) {
+-				fld = new MovieInfoVirtualFolder("Title: " + title, thumb);
++				fld = new MovieInfoVirtualFolder(showtags ? "Title: " : "" + title, thumb);
+ //				System.out.println("Title: " + title);
+ 			} else {
+ 				fld = new MovieInfoVirtualFolder(wrapKerned(title.toUpperCase(), 1.2), thumb);
+@@ -326,12 +326,12 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 		}
+ 	}
+ 	private void displayPlot(MovieInfoVirtualFolder fld){
+-		String plot1 = "", temp = "Plot: ";
++		String plot1 = "", temp = showtags ? "Plot: " : "";
+ 		int start = 0;
+ 		if (plot != null) {
+ 			plot = clean(plot);
+ //			System.out.println("Plot clean = " + plot);
+-			if(cellwrap > 0) {
++			if(cellwrap != 0) {
+ 				addInfo("Plot: ", plot);
+ 			} else {
+ 				for (int i = 0; i <= plot.length(); i = i + lineLength ) {
+@@ -353,17 +353,17 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 	}
+ 	private void displayCast(MovieInfoVirtualFolder fld){
+ 		if (!castlist.isEmpty() && castlist != null) {
+-			String temp = "Cast: ";String plot1 =null;String act = "";
++			String temp = showtags ? "Cast: " : "";String plot1 =null;String act = "";
+ 			int a = 0;
+ 			while (!castlist.isEmpty() && a++ < numberOfActors) {
+ 				if(castlist.get(0) != null)
+ 				plot1 = castlist.remove(0).replaceAll("S[X,Y][0-9]{2}_S[X,Y][0-9]{2}_", "SX300_SY300_").replace("http://i.media-imdb.com/images/tn15/addtiny.gif","http://i.media-imdb.com/images/nophoto.jpg");
+ 				act = clean(castlist.remove(0));
+-				String label = (cellwrap > 0 ? "" : temp)
++				String label = (cellwrap != 0 ? "" : temp)
+ 						+ act + " as "
+ 						+ clean(castlist.remove(0));
+ 				fld = (new MovieInfoVirtualFolder(
+-						(cellwrap > 0 ? wrap(label) : label), null));
++						(cellwrap != 0 ? wrap(label) : label), null));
+ 				fld.addChild(new MovieInfoVirtualData(act,plot1));
+ 				addChild(fld);
+ //				System.out.println(act);
+@@ -378,7 +378,9 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 		if (cellwrap > 0) {
+ 			s = wrap(s);
+ 			addChild(new MovieInfoVirtualFolder(s, null));
+-			int blanks = (s.replaceAll("[^\n]", "").length() + cellwrap - 1) / cellwrap - 1;
++			int blanks = ((s.replaceAll("[^\n]", "").length() * 10 + 5) / cellwrap);
++//			int blanks = (int)(((double)s.replaceAll("[^\n]", "").length() + 0.5) / cellwrap);
++//			int blanks = (s.replaceAll("[^\n]", "").length() + cellwrap - 1) / cellwrap - 1;
+ 			for (int i = 0; i < blanks; i++)
+ 				addChild(new MovieInfoVirtualFolder("", null));
+ 		} else
+diff --git a/net/pms/movieinfo/ResourceExtension.java b/net/pms/movieinfo/ResourceExtension.java
+index 86d00ed..30d926c 100644
+--- a/net/pms/movieinfo/ResourceExtension.java
++++ b/net/pms/movieinfo/ResourceExtension.java
+@@ -75,7 +75,7 @@ public class ResourceExtension {
+ 						if(line.startsWith("Plugins="))plugins = line.substring(line.indexOf("=")+1,line.length()).toUpperCase();
+ 						if(line.startsWith("NumberOfActors="))numberOfActors = Integer.parseInt(line.substring(line.indexOf("=")+1,line.length()));
+ 						if(line.startsWith("Linelength="))lineLength = Integer.parseInt(line.substring(line.indexOf("=")+1,line.length()));
+-						if(line.startsWith("cellwrap="))cellwrap = Integer.parseInt(line.substring(line.indexOf("=")+1,line.length()));
++						if(line.startsWith("cellwrap="))cellwrap = (int)(Double.parseDouble(line.substring(line.indexOf("=")+1,line.length()))*10);
+ 						if(line.startsWith("showtags="))showtags = Boolean.parseBoolean(line.substring(line.indexOf("=")+1,line.length()));
+ 						if(line.startsWith("Cover="))cover = line.substring(line.indexOf("=")+1,line.length());
+ 					}
+-- 
+1.7.5.4
+
+
+From d091f0e0157b6919089ab152067ab760cc1d2c80 Mon Sep 17 00:00:00 2001
+From: infidel <aval57@yahoo.com>
+Date: Sat, 19 Nov 2011 12:13:31 -0500
+Subject: [PATCH 5/6] fixed missing title when cellwrap=0
+
+---
+ net/pms/movieinfo/FileMovieInfoVirtualFolder.java |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/net/pms/movieinfo/FileMovieInfoVirtualFolder.java b/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
+index 2bd9396..00e377a 100644
+--- a/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
++++ b/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
+@@ -213,7 +213,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ 		if (title != null) {
+ 			title = clean(title);
+ 			if(cellwrap==0) {
+-				fld = new MovieInfoVirtualFolder(showtags ? "Title: " : "" + title, thumb);
++				fld = new MovieInfoVirtualFolder((showtags ? "Title: " : "") + title, thumb);
+ //				System.out.println("Title: " + title);
+ 			} else {
+ 				fld = new MovieInfoVirtualFolder(wrapKerned(title.toUpperCase(), 1.2), thumb);
+-- 
+1.7.5.4
+
+
+From 69f5f88b81879188a07e2dfc2142817a4caa4bad Mon Sep 17 00:00:00 2001
+From: infidel <aval57@yahoo.com>
+Date: Wed, 23 Nov 2011 14:47:13 -0500
+Subject: [PATCH 6/6] fixed imdb rating/agerating
+
+---
+ net/pms/movieinfo/FileMovieInfoVirtualFolder.java |    1 +
+ net/pms/movieinfo/plugins/IMDBPlugin.java         |    8 ++++----
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/net/pms/movieinfo/FileMovieInfoVirtualFolder.java b/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
+index 00e377a..0c41589 100644
+--- a/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
++++ b/net/pms/movieinfo/FileMovieInfoVirtualFolder.java
+@@ -203,6 +203,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
+ //			  System.out.println("genre: " + genre);
+ //			  System.out.println("tagline: " + tagline);
+ //			  System.out.println("rating: " + rating);
++//			  System.out.println("agerating: " + agerating);
+ //			  System.out.println("votes: " + votes);
+ //			  System.out.println("thumb: " + thumb);
+ 
+diff --git a/net/pms/movieinfo/plugins/IMDBPlugin.java b/net/pms/movieinfo/plugins/IMDBPlugin.java
+index 5fc1d96..77563d0 100644
+--- a/net/pms/movieinfo/plugins/IMDBPlugin.java
++++ b/net/pms/movieinfo/plugins/IMDBPlugin.java
+@@ -106,19 +106,19 @@ public class IMDBPlugin implements Plugin
+ 	}
+ 	@Override
+ 	public String getAgeRating() {
+-		fs = sb.indexOf("MPAA</a>)</h4>");
++		fs = sb.indexOf("itemprop=\"contentRating\">");
+ 		String agerating = null;
+ 		if (fs > -1) {
+-			agerating = sb.substring(fs + 14, sb.indexOf("<", fs + 14));
++			agerating = sb.substring(fs + 25, sb.indexOf("<", fs + 25));
+ 		}
+ 		return agerating;
+ 	}
+ 	public String getRating()
+ 	{
+-		fs = sb.indexOf("Users rated this ");
++		fs = sb.indexOf("itemprop=\"ratingValue\">");
+ 		String rating = null;
+ 		if (fs > -1) {
+-			rating = sb.substring(fs+17,sb.indexOf("-", fs+17));
++			rating = sb.substring(fs+23,sb.indexOf("<", fs+23)) + "/10";
+ 		}
+ 		return rating;
+ 	}
+-- 
+1.7.5.4
+

@@ -1,0 +1,2 @@
+http://cloud.github.com/downloads/SharkHunter/MovieInfo/movieinfo.jar
+https://raw.github.com/SharkHunter/MovieInfo/master/MOVIEINFO.conf,root
