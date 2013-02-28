@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
 import net.pms.dlna.DLNAResource;
+import net.pms.dlna.WebVideoStream;
 import net.pms.dlna.virtual.VirtualFolder;
 import net.pms.movieinfo.plugins.Plugin;
 
@@ -78,10 +79,10 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	@Override
 	public void resolve() {
 		super.resolve();
-			
+
 		if(nfoId ==  null)
 			nfoId=MovieInfo.extractImdb(origRes);
-		
+
 		if (!resolved && getChildren().size() == 0) {
 			getConfig();
 			MovieInfoVirtualFolder fld = null;
@@ -89,14 +90,12 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 				isDVD = true;
 			String name = getParent().getName();
 			name = name.replaceAll("\\..{2,4}$", "");
-			
-					
+
+
 			if (className != null)
-			className = className.replace(" INFO", "");
-//			System.out.println(className);
+				className = className.replace(" INFO", "");
 			String classNameIMDB = "net.pms.movieinfo.plugins.IMDBPlugin";
 			String classNamePlugin = "net.pms.movieinfo.plugins." +className+ "Plugin";
-			//System.out.println(classNamePlugin);
 			Plugin imdb = null;
 			Plugin plugin = null;
 
@@ -105,67 +104,47 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 				plugin = (Plugin)(Class.forName(classNamePlugin).newInstance());
 
 			} catch (InstantiationException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			} catch (IllegalAccessException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
 			pluginTv = plugin.getTvShow();
 			pluginUrl = plugin.getGoogleSearchSite();
 			pluginChar = plugin.getCharSet();
-			
+
 			String nfo = nfoId;
 			if(nfo.length() == 0)
 				nfo = imdbIDFromNfo(name);
 			if (nfo != null) {
-//				System.out.println(plugin.getClass().getSimpleName() + " nfo file found");
-//				System.out.println(plugin.getClass().getSimpleName() + " nfo =" +nfo);
-				if (nfo.matches("tt[0-9]{7}")) {
-//					System.out.println(plugin.getClass().getSimpleName() + " nfo file matches imdb");
-					
+				if (nfo.matches("tt[0-9]{7}")) {					
 					if (!className.equals("IMDB")) {
 						imdb.importFile(getWebsite(nfo, imdb.getVideoURL(),	MOVIEWEBSITE, null));
-//						System.out.println(className + " nfo file matches imdb");
 						if ((nfo = plugin.lookForMovieID(getWebsite(imdb.getTitle(), null,GOOGLE, plugin.getGoogleSearchSite()))) != null)
 							plugin.importFile(getWebsite(nfo, plugin.getVideoURL(), MOVIEWEBSITE, null));
 					} else
 						plugin.importFile(getWebsite(nfo, plugin.getVideoURL(),	MOVIEWEBSITE, null));						
 				} else {
-//					System.out.println(plugin.getClass().getSimpleName() + " nfo file dont matches imdb");
 					plugin.importFile(getWebsite(nfo, plugin.getVideoURL(),MOVIEWEBSITE, null));
 				}
 			} else {
-//				System.out.println(plugin.getClass().getSimpleName() + " nfo file not found, search filename");
 				String moviename = "";
 				if (!isDVD)
 					moviename = getMovienameFromFilename(getParent().getName());
 				else
 					moviename = getMovienameFromFilename(getParent().getParent().getParent().getDisplayName().replace("[DVD ISO] ", ""));
-				//System.out.println("Moviename = " + moviename);
-//				System.out.println(plugin.getClass().getSimpleName() + " Moviename = " + moviename);
 				if (!moviename.equals(""))
 					nfo = plugin.lookForMovieID(getWebsite(moviename, null, GOOGLE, plugin.getGoogleSearchSite()));
 				if (nfo != null) {
-//					System.out.println(plugin.getClass().getSimpleName() + " nfo =" +nfo);
 					plugin.importFile(getWebsite(nfo, plugin.getVideoURL(), MOVIEWEBSITE, null));
-					} else {
-//					System.out.println(plugin.getClass().getSimpleName() + " movie from moviename not found, search directory name");
+				} else {
 					if (!isDVD)
 						moviename = getMovienameFromFilename(getMovienameFromFilename(getParent().getParent().getParent().getName()));
 					else 
 						moviename = getMovienameFromFilename(getParent().getParent().getParent().getParent().getName());
-					
-//					System.out.println(plugin.getClass().getSimpleName() + " Directory name = " + moviename);
-					//System.out.println("Foldername = " + moviename);
+
 					if (!moviename.equals(""))
 						nfo = plugin.lookForMovieID(getWebsite(moviename, null, GOOGLE, plugin.getGoogleSearchSite()));
 					if (nfo != null) {
 						plugin.importFile(getWebsite(nfo, plugin.getVideoURL(), MOVIEWEBSITE, null));
-//						System.out.println(plugin.getClass().getSimpleName() + " nfo =" +nfo);
 					}
 				}
 			}
@@ -208,16 +187,6 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 				}
 
 			}
-//			  System.out.println("Title: " + title);
-//			  System.out.println("plot: " + plot);
-//			  System.out.println("dir: " + dir);
-//			  System.out.println("genre: " + genre);
-//			  System.out.println("tagline: " + tagline);
-//			  System.out.println("rating: " + rating);
-//			  System.out.println("agerating: " + agerating);
-//			  System.out.println("votes: " + votes);
-//			  System.out.println("thumb: " + thumb);
-
 		}
 		resolved = true;
 	}
@@ -227,27 +196,23 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 			title = clean(title);
 			if(cellwrap == 0) {
 				fld = new MovieInfoVirtualFolder((showtags ? "Title: " : "") + title, thumb);
-//				System.out.println("Title: " + title);
 			} else {
 				fld = new MovieInfoVirtualFolder(wrapKerned(title.toUpperCase(), 1.2), thumb);
-//				System.out.println(wrapKerned(title.toUpperCase(), 1.2));
 			}
 			if (thumb != null)
-			fld.addChild(new MovieInfoVirtualData(title, thumb.replaceAll("S[X,Y][0-9]{2,3}_S[X,Y][0-9]{2,3}_", "SX300_SY300_")));
+				fld.addChild(new MovieInfoVirtualData(title, thumb.replaceAll("S[X,Y][0-9]{2,3}_S[X,Y][0-9]{2,3}_", "SX300_SY300_")));
 			if(cover.equals("1")) {
-			File f = null;
-			if (!isDVD && className.equals(priority))
-			try {
+				File f = null;
+				if (!isDVD && className.equals(priority))
+					try {
 						f = new File((StringUtils.isNotBlank(thumbfolder) ? thumbfolder : getParent().getParent().getParent().getSystemName()) + File.separator + getParent().getName() + ".cover.jpg");
-//						System.out.println("cover="+ f.getAbsolutePath());
 						if (!f.exists() && f.isAbsolute()) {
-							
+
 							URL url = null;
 							if(thumb != null && thumb.matches("S[X,Y][0-9]{2,3}_S[X,Y][0-9]{2,3}_"))
 								thumb = thumb.replaceAll("S[X,Y][0-9]{2,3}_S[X,Y][0-9]{2,3}_","SX300_SY300_");
 							if(thumb != null) {
 								url = new URL(thumb);
-//								System.out.println("thumb="+thumb);
 								ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 								URLConnection conn;
 								conn = url.openConnection();
@@ -269,19 +234,11 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 							}
 						}
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
 					}
 			}
 			if (className.equals("IMDB")) {
-				String[] yt = getYoutubeTrailer(getWebsite(title.replace(" & ", " ") + " trailer", "http://www.youtube.com/results?search_type=videos&search_query=###MOVIEID###&high_definition=1", MOVIEWEBSITE, null), true);
-				if (!"None".equalsIgnoreCase(yt[1])) {
-					fld.addChild(new MovieInfoTrailer("Youtube: " + yt[1], thumb, yt[0]));
-				}
-				yt = getYoutubeTrailer(getWebsite(title.replace(" & ", " ") + " trailer hd", null, GOOGLE, "youtube.com"), false);
-				if (!"None".equalsIgnoreCase(yt[1])) {
-					fld.addChild(new MovieInfoTrailer("Google: " + yt[1], thumb, yt[0]));
-				}
+				if(trailer != null)
+					addChild(new WebVideoStream(title+" - Trailer",trailer,thumb));
 			}
 			addChild(fld);
 		} 	
@@ -363,13 +320,12 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 			int a = 0;
 			while (!castlist.isEmpty() && a++ < numberOfActors) {
 				if(castlist.get(0) != null)
-				plot1 = castlist.remove(0).replaceAll("S[X,Y][0-9]{2}_S[X,Y][0-9]{2}_", "SX300_SY300_").replace("http://i.media-imdb.com/images/tn15/addtiny.gif","http://i.media-imdb.com/images/nophoto.jpg");
+				plot1 = castlist.remove(0);//.replaceAll("S[X,Y][0-9]{2}_S[X,Y][0-9]{2}_", "SX300_SY300_").replace("http://i.media-imdb.com/images/tn15/addtiny.gif","http://i.media-imdb.com/images/nophoto.jpg");
 				act = clean(castlist.remove(0));
 				String label = (cellwrap != 0 ? "" : temp) + act + (castlist.get(0) == "" ? "" : " as ") + clean(castlist.remove(0));
-				fld = (new MovieInfoVirtualFolder((cellwrap != 0 ? wrap(label) : label), null));
+				fld = (new MovieInfoVirtualFolder((cellwrap != 0 ? wrap(label) : label), plot1));
 				fld.addChild(new MovieInfoVirtualData(act,plot1));
 				addChild(fld);
-//				System.out.println(act);
 				temp = showtags ? "____   " : "";
 			}
 		}
@@ -388,7 +344,6 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 				addChild(new MovieInfoVirtualFolder("", null));
 		} else
 			addChild(new MovieInfoVirtualFolder(s, null));
-//		System.out.println(s);
 	}
 
 	private String wrapKerned(String s, double factor) {
@@ -441,10 +396,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 				}
 			} */
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			// System.out.println("imdbIDFromNfo Exception: " + e);
 		}
-//		System.out.println("imdbIDFromNfo Returns " + newURL);
 		return newURL;
 	}
 
@@ -473,11 +425,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 				fs = temp.indexOf(pluginUrl);
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-//			 System.out.println("lookForImdbID Exception: " + e);
-//			 e.printStackTrace();
 		}
-//		System.out.println("lookForImdbID Returns " + newURL);
 		return newURL;
 	}
 
@@ -507,11 +455,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 			}
 			yt[2] = temp.indexOf("isHDAvailable = true") +"";			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-//			 System.out.println("lookForImdbID Exception: " + e);
-//			 e.printStackTrace();
 		}
-//		System.out.println("lookForImdbID Returns " + newURL);
 		return yt;
 	}
 
@@ -536,12 +480,6 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 			String host = u.getHost();
 			String file = u.toString().replace("http://" + u.getHost(), "");
 
-//			System.out.println(u.toString());
-//			System.out.println(u.getPath());
-//			System.out.println(u.getHost());
-//			System.out.println("file= " + file);
-//			System.out.println("host= " + host);
-			
 			URLConnection conn;
 			conn = u.openConnection();
 			conn.setRequestProperty("GET",file + " HTTP/1.0");
@@ -588,12 +526,8 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 			in = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bout.toByteArray()), pluginChar));
 
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			//System.out.println("getWebsite Exception: " + e);
-			// e.printStackTrace();
 		}
 
-		//System.out.println("getWebsite Returns " + in.toString() + "Google =" + google);
 		return in;
 	}
 
@@ -687,7 +621,6 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 		if(f != null)
 			if(f.contains("сериал"))
 				h = h + " %D1%81%D0%B5%D1%80%D0%B8%D0%B0%D0%BB";
-//		System.out.println("getMovienameFromFilename Returns " + h);
 		return h;
 	}
 

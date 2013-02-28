@@ -5,7 +5,10 @@ import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,8 +35,6 @@ public class IMDBPlugin implements Plugin
 				eachLine = br.readLine();
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 	}
 	public String getTitle() 
@@ -47,13 +48,13 @@ public class IMDBPlugin implements Plugin
 
 		}
 		if (title != null)
-		if (title.contains("Page not found"))title=null;
+			if (title.contains("Page not found"))
+				title=null;
 		}
 		return title;
 	}
 	public String getPlot()
 	{
-		//fs = sb.indexOf("Plot:</h5>");
 		fs = sb.indexOf("Storyline</h2>");
 		fs=sb.indexOf("<p>",fs+14);
 		String plot = null;
@@ -80,21 +81,13 @@ public class IMDBPlugin implements Plugin
 	}
 	public String getGenre()
 	{
-		int end = 0;
-		fs = sb.indexOf("itemprop=\"genre\"");
-		fs = sb.indexOf(">", fs) + 1;
-	/*	end = sb.indexOf("<a class=", fs) + 2;
-		if (end > sb.indexOf("</div", fs))*/
-		end = sb.indexOf("</div>", fs);
-		String genre = null;
-		if (fs > -1 && end > -1) {
-			genre = "";
-			while (fs < end) {
-				genre = genre + sb.substring(fs, sb.indexOf("</a>", fs));
-				fs = sb.indexOf(" >", fs) + 2;
-				if (fs < end)
-					genre = genre + ", ";
-			}
+		Pattern re = Pattern.compile("itemprop=\"genre\">([^>]+)</span></a>");
+		Matcher m=re.matcher(sb.toString());
+		String genre ="";
+		String sep="";
+		while(m.find()) {
+			genre = genre + sep + m.group(1);
+			sep = ", ";
 		}
 		return genre;
 	}
@@ -150,11 +143,14 @@ public class IMDBPlugin implements Plugin
 				fs=sb.indexOf("alt=\"",fs);
 				String n1=sb.substring(fs+5, sb.indexOf("\"", fs+5));
 				// image
-				fs=sb.indexOf("src=\"",fs);
-				castlist.add(sb.substring(fs+5, sb.indexOf("\"", fs+5)));
+				fs=sb.indexOf("loadlate=\"",fs);
+				String p=sb.substring(fs+10, sb.indexOf("\"", fs+10));
+				p=p.replaceAll("SX32","SX214").replaceAll("32,44_", "214,314_");
+				p=p.replaceAll("SY44","SY314").replaceAll("32,44_", "214,314_");
+				castlist.add(p);
 				castlist.add(n1);
 				// character
-				fs = sb.indexOf("class=\"character\"", fs + 5);
+				fs = sb.indexOf("class=\"character\"", fs + 10);
 				fs = sb.indexOf("<div>", fs + 17);
 				// work backwards from first close tag because div contents could be either plain text or <a>
 				int end2 = sb.indexOf("</", fs + 5);
@@ -196,20 +192,20 @@ public class IMDBPlugin implements Plugin
 			}
 
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			//System.out.println("lookForImdbID Exception: " + e);
-			// e.printStackTrace();
 		}
-		//System.out.println("lookForImdbID Returns " + newURL);
 		return newURL; //To use as ###MOVIEID### in getVideoURL()
 	}
 	
 	public String getTrailerURL() {
-		int start=sb.indexOf("a href=\"/video/imdb/");
-		if(start<0)
-			return null;
-		int end=sb.indexOf("\"",start+20);
-		String tmp="http://www.imdb.com"+sb.substring(start+8,end)+"html5";
+		Pattern re=Pattern.compile("href=\"(/video[^\\?]+)\\?[^\"]+\"");
+		Matcher m=re.matcher(sb.toString());
+		String tmp="";
+		if(m.find()) {
+			String vid = m.group(1);
+			if(!vid.endsWith("/"))
+				vid = vid + "/";
+			tmp="http://www.imdb.com" + vid + "player?stop=0";
+		}
 		try {
 			URL u=new URL(tmp);
 			URLConnection c=u.openConnection();
@@ -220,16 +216,31 @@ public class IMDBPlugin implements Plugin
 			while((line=in.readLine())!=null) {
 				page.append(line);
 			}
-			int id=page.indexOf("mp4_h264");
-			if(id<0)
-				return null;
-			id=page.indexOf("\'",id)+1;
-			end=page.indexOf("\'",id);
-			return page.substring(id,end);
+			in.close();
+			String rtmp=findTrailerData("file",page.toString());
+			String id=findTrailerData("id",page.toString());
+			return rtmp+" playpath="+id+" swfVfy=1 swfUrl=http://www.imdb.com/images/js/app/video/mediaplayer.swf";
 		}
 		catch (Exception e) {
 			logger.debug("error "+e);
 			return null;
 		}
+	}
+	
+	private String findTrailerData(String field,String page) {
+		Pattern re=Pattern.compile("addVariable\\(\""+field+"\"[^\"]+\"([^\"]+)\"\\);");
+		Matcher m=re.matcher(page);
+		if(m.find())
+			return unescape(m.group(1));
+		return null;
+	}
+	
+	private String unescape(String str) {
+		try {
+			logger.debug("unesc "+str);
+			return URLDecoder.decode(str,"UTF-8");
+		} catch (Exception e) {
+		}
+		return str;
 	}
 }
