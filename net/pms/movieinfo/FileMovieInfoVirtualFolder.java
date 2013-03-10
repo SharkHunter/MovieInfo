@@ -22,7 +22,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
+import net.pms.PMS;
 import net.pms.dlna.DLNAResource;
+import net.pms.dlna.RealFile;
 import net.pms.dlna.WebVideoStream;
 import net.pms.dlna.virtual.VirtualFolder;
 import net.pms.movieinfo.plugins.Plugin;
@@ -64,6 +66,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	private String trailer;
 	private String cookie;
 	private DLNAResource origRes;
+	private String hash;
 
 	private int cellwrap = 0;
 	private boolean showtags = true;
@@ -71,7 +74,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	private boolean removeyear = false;
 	private String thumbfolder = "";
 	private static final Logger logger = LoggerFactory.getLogger(FileMovieInfoVirtualFolder.class);
-
+	
 	public FileMovieInfoVirtualFolder(String name, String thumbnailIcon, boolean copy) {
 		super(name, thumbnailIcon);
 	}
@@ -79,17 +82,26 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	@Override
 	public void resolve() {
 		super.resolve();
+		gather();
+		MovieInfoVirtualFolder fld = null;
+		display(fld);
+		resolved = true;
+	}
 
+	public void gather() {
 		if(nfoId ==  null)
 			nfoId=MovieInfo.extractImdb(origRes);
 
 		if (!resolved && getChildren().size() == 0) {
 			getConfig();
-			MovieInfoVirtualFolder fld = null;
-			if (getParent().getParent().getParent().getName().contains("[DVD ISO]"))
-				isDVD = true;
-			String name = getParent().getName();
+			String name=getName();
+			if(getParent()!=null) {
+				if (getParent().getParent().getParent().getName().contains("[DVD ISO]"))
+					isDVD = true;
+				name = getParent().getName();
+			}
 			name = name.replaceAll("\\..{2,4}$", "");
+
 
 
 			if (className != null)
@@ -149,46 +161,47 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 				}
 			}
 			if (nfo != null) {
-				for (int i = 0; i < disp.length; i++) {
-					if(disp[i].contains("title")) {
-						title = plugin.getTitle();
-						thumb = plugin.getVideoThumbnail();
-						trailer = plugin.getTrailerURL();
-						displayTitle(fld);
-					}
-					if(disp[i].equals("rating")) {
-						rating = plugin.getRating();
-						displayRating(fld);
-					}
-					if(disp[i].contains("genre")) {
-						genre = plugin.getGenre();
-						displayGenre(fld);
-					}
-					if(disp[i].contains("plot")) {
-						plot = plugin.getPlot();
-						displayPlot(fld);
-					}
-					if(disp[i].contains("director")) {
-						dir = plugin.getDirector();
-						displayDirector(fld);
-					}
-					if(disp[i].contains("cast")) {
-						castlist = plugin.getCast();
-						displayCast(fld);
-					}
-					if(disp[i].contains("tagline")) {
-						tagline = plugin.getTagline();
-						displayTagline(fld);
-					}
-					if(disp[i].equals("agerating")) {
-						agerating = plugin.getAgeRating();
-						displayAgeRating(fld);
-					}
-				}
-
+				title = plugin.getTitle();
+				thumb = plugin.getVideoThumbnail();
+				trailer = plugin.getTrailerURL();
+				rating = plugin.getRating();
+				genre = plugin.getGenre();
+				plot = plugin.getPlot();
+				dir = plugin.getDirector();
+				castlist = plugin.getCast();
+				tagline = plugin.getTagline();
+				agerating = plugin.getAgeRating();
 			}
+			MovieDB.add(origRes, nfoId, 
+					genre, title, rating, 
+					dir,agerating,castlist,
+					thumb,hash);
 		}
-		resolved = true;
+	}
+	
+	public void setHash(String h) {
+		hash=h;
+	}
+	
+	private void display(MovieInfoVirtualFolder fld) {
+		for (int i = 0; i < disp.length; i++) {
+			if(disp[i].contains("title"))
+				displayTitle(fld);
+			if(disp[i].equals("rating")) 
+				displayRating(fld);
+			if(disp[i].contains("genre")) 
+				displayGenre(fld);
+			if(disp[i].contains("plot"))
+				displayPlot(fld);
+			if(disp[i].contains("director")) 
+				displayDirector(fld);
+			if(disp[i].contains("cast")) 
+				displayCast(fld);
+			if(disp[i].contains("tagline"))
+				displayTagline(fld);
+			if(disp[i].equals("agerating"))
+				displayAgeRating(fld);
+		}
 	}
 	
 	private void displayTitle(MovieInfoVirtualFolder fld) {
@@ -666,13 +679,26 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 
 	public FileMovieInfoVirtualFolder(String name, String thumbnailIcon,int act, int line,String nfo) {
 		super(name, thumbnailIcon);
-		if(act > 0)
+		if(act > 0 && act < numberOfActors)
 			numberOfActors = act;
 		if(line > 0)
 			lineLength = line;
 		className = name;
 		nfoId = nfo;
 	}
+	
+	public FileMovieInfoVirtualFolder(String name, String thumbnailIcon,
+									  int act, int line,String nfo,DLNAResource r) {
+		super(name, thumbnailIcon);
+		if(act > 0 && act < numberOfActors)
+			numberOfActors = act;
+		if(line > 0)
+			lineLength = line;
+		className = name;
+		nfoId = nfo;
+		origRes=r;
+	}
+	
 
 	public FileMovieInfoVirtualFolder(String name, String thumbnailIcon, ResourceExtension r) {
 		super(name, thumbnailIcon);

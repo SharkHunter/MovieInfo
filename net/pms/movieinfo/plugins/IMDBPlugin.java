@@ -45,11 +45,12 @@ public class IMDBPlugin implements Plugin
 		
 		if (fs > -1) {
 			title = sb.substring(fs + 7, sb.indexOf("</title>", fs));
-
 		}
 		if (title != null)
 			if (title.contains("Page not found"))
 				title=null;
+			else
+				title=title.replace("- IMDb", "").trim();
 		}
 		return title;
 	}

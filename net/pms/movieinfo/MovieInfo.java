@@ -1,13 +1,21 @@
 package net.pms.movieinfo;
 
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
+import javax.swing.JOptionPane;
 
+import net.pms.dlna.DLNAMediaDatabase;
 import net.pms.dlna.DLNAResource;
 import net.pms.dlna.RealFile;
+import net.pms.external.AdditionalFolderAtRoot;
 import net.pms.external.AdditionalResourceFolderListener;
+import net.pms.newgui.LooksFrame;
 
+import java.awt.Component;
 import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.regex.Matcher;
@@ -15,6 +23,9 @@ import java.util.regex.Pattern;
 
 import javax.swing.JTextField;
 
+import org.apache.commons.lang.StringUtils;
+
+import net.pms.Messages;
 import net.pms.PMS;
 
 
@@ -36,7 +47,8 @@ import com.jgoodies.forms.layout.FormLayout;
 * THIS MACHINE, SO JIGLOO OR THIS CODE CANNOT BE USED
 * LEGALLY FOR ANY CORPORATE OR COMMERCIAL PURPOSE.
 */
-public class MovieInfo implements AdditionalResourceFolderListener {
+public class MovieInfo implements AdditionalFolderAtRoot,
+								  AdditionalResourceFolderListener {
 	private String Plugins="IMDB,FILMWEB,CSFD,MOVIEMETER,ALLOCINE,MYMOVIES,OFDB,FILMDELTA,SENSACINE,ONFILM,KINOPOISK";
 	private String NumberOfActors="99";
 	private String DisplayInfo="title,rating,tagline,genre,plot,cast,director";
@@ -90,11 +102,12 @@ public class MovieInfo implements AdditionalResourceFolderListener {
 	private JTextField DisplayInfoField;
 	private JTextField LinelengthField;
 	private JTextField FilterField;
+	private JTextField ScanPath;
 
 	@Override
 	public JComponent config() {
 		FormLayout layout = new FormLayout("left:pref, 2dlu, p,2dlu, p,2dlu, p, 2dlu, p, 2dlu, p,2dlu, p,200dlu, pref:grow", //$NON-NLS-1$
-				"p, 5dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, 0:grow"); //$NON-NLS-1$
+				"p, 5dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p,0:grow"); //$NON-NLS-1$
 		PanelBuilder builder = new PanelBuilder(layout);
 		builder.setBorder(Borders.EMPTY_BORDER);
 		builder.setOpaque(false);
@@ -238,10 +251,64 @@ public class MovieInfo implements AdditionalResourceFolderListener {
 			}
 			
 		});
+		ScanPath=new JTextField();
 		builder.addLabel("Filter:", cc.xy(1, 7));
 		builder.add(FilterField, cc.xyw(3, 7,12));
+		builder.addLabel("Scan path:", cc.xy(1, 9));
+		builder.add(ScanPath, cc.xyw(3, 9,12));
+		ScanPath.setText((String)PMS.getConfiguration().getCustomProperty("movieinfo.scan_path"));
+		JButton scan =new JButton("Scan files");
+		scan.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (mdb!=null) {
+					if (!mdb.isScanLibraryRunning()) {
+						int option = JOptionPane.showConfirmDialog(
+								(Component) PMS.get().getFrame(),
+								Messages.getString("FoldTab.3") + Messages.getString("FoldTab.4"),
+								Messages.getString("Dialog.Question"),
+								JOptionPane.YES_NO_OPTION);
+						if (option == JOptionPane.YES_OPTION) {
+							mdb.scanLibrary(ScanPath.getText());
+						}
+					} else {
+						int option = JOptionPane.showConfirmDialog(
+								(Component) PMS.get().getFrame(),
+								Messages.getString("FoldTab.10"),
+								Messages.getString("Dialog.Question"),
+								JOptionPane.YES_NO_OPTION);
+						if (option == JOptionPane.YES_OPTION) {
+							mdb.stopScanLibrary();
+						}
+					}
+				}
+			}
+		});
+		builder.add(scan,cc.xy(1, 11));
 
 		return builder.getPanel();
+	}
+	
+	private MovieDB mdb;
+	
+	public MovieInfo() {
+		PMS.info("Starting MovieInfo");
+		mdb=null;
+		if(movieDB()){
+			mdb=new MovieDB();
+		}
+	}
+	
+	public static boolean movieDB() {
+		String s=(String)PMS.getConfiguration().getCustomProperty("movieinfo.movieDB");
+		if(StringUtils.isNotEmpty(s))
+			return s.equalsIgnoreCase("true");
+		return false;
+	}
+
+	@Override
+	public DLNAResource getChild() {
+		return mdb;
 	}
 
 }
