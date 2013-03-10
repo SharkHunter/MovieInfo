@@ -121,7 +121,7 @@ public class CSFDPlugin implements Plugin
 
 		fs = sb.indexOf("<h4>Hrají:</h4>");
 		if (fs > -1) {
-			fs = sb.indexOf(">", fs + 46) + 1;
+			fs = sb.indexOf("/\">", fs) + 3;
 			int enditem = fs;
 			int end = sb.indexOf("</a>	", fs);
 			while (enditem != end) {
