@@ -292,10 +292,23 @@ public class MovieDB extends VirtualFolder implements Runnable {
 		return r;
 	}
 	
-	private void scanDir(File dir) {
+	private boolean recurse() {
+			String s=(String)PMS.getConfiguration().getCustomProperty("movieinfo.movieDB_recurse");
+			if(StringUtils.isNotEmpty(s))
+				return s.equalsIgnoreCase("true");
+			return false;
+	}
+	
+	private void scanDir(File dir,ArrayList<File> scanned) {
 		File[] files=dir.listFiles();
 		for(File f : files) {
 			try {
+				if(f.isDirectory() && recurse()) {
+					if(scanned.contains(f)) // don't scan dirs more than once
+						continue;
+					scanned.add(f);
+					scanDir(f,scanned);
+				}
 				if(alreadyScanned(f)) {
 					continue;
 				}
@@ -309,7 +322,9 @@ public class MovieDB extends VirtualFolder implements Runnable {
 				}
 				if(!imdb.startsWith("tt"))
 					imdb="tt"+imdb;
-				FileMovieInfoVirtualFolder fmf =new FileMovieInfoVirtualFolder("IMDB INFO",null,
+				FileMovieInfoVirtualFolder fmf =new FileMovieInfoVirtualFolder(
+													"IMDB INFO",
+													null,
 													0,0,imdb,new RealFile(f));
 				fmf.setHash(hash);
 				fmf.gather();
@@ -333,9 +348,10 @@ public class MovieDB extends VirtualFolder implements Runnable {
 			}
 		}
 		for(File f : dirs) {
+			PMS.info("scan dir "+f.getAbsolutePath());
 			if(!f.exists())
 				continue;
-			scanDir(f);
+			scanDir(f,new ArrayList<File>());
 		}
 		scanner=null;
 	}

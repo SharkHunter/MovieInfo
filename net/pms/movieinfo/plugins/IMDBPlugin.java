@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import net.pms.PMS;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,19 +68,11 @@ public class IMDBPlugin implements Plugin
 	}
 	public String getDirector()
 	{
-		String dir = null;
-		int end = -1;
-		fs = sb.indexOf("\"description\" content=\"");
-		if (fs > -1)
-		end = sb.indexOf("With", fs+23);
-		if (end > -1) {
-			dir = sb.substring(fs+23, end);
-			fs = dir.lastIndexOf(" by ");				
-			if (fs > -1) {
-				dir = dir.substring(fs + 4, dir.length());
-			}else dir = null;
-		}
-		return dir;
+		Pattern re=Pattern.compile("\"description\" content=\"Directed by ([^\\.]+)\\.");
+		Matcher m=re.matcher(sb.toString());
+		if(m.find())
+			return m.group(1);
+		return null;
 	}
 	public String getGenre()
 	{
@@ -131,40 +125,26 @@ public class IMDBPlugin implements Plugin
 	}
 	public ArrayList<String> getCast()
 	{
-		fs = sb.indexOf("class=\"cast_list\"");
-		int end = sb.indexOf("</table", fs);
-		int end1 = 0;
-		
-		if (fs > -1)
-			fs = sb.indexOf("<img", fs) + 4;
-			
-		if (fs > -1) {
-			while (fs < end && fs != 5) {
-				// name
-				fs=sb.indexOf("alt=\"",fs);
-				String n1=sb.substring(fs+5, sb.indexOf("\"", fs+5));
-				// image
-				fs=sb.indexOf("loadlate=\"",fs);
-				String p=sb.substring(fs+10, sb.indexOf("\"", fs+10));
-				p=p.replaceAll("SX32","SX214").replaceAll("32,44_", "214,314_");
-				p=p.replaceAll("SY44","SY314").replaceAll("32,44_", "214,314_");
-				castlist.add(p);
-				castlist.add(n1);
-				// character
-				fs = sb.indexOf("class=\"character\"", fs + 10);
-				fs = sb.indexOf("<div>", fs + 17);
-				// work backwards from first close tag because div contents could be either plain text or <a>
-				int end2 = sb.indexOf("</", fs + 5);
-				end1 = sb.lastIndexOf(">", end2);
-				if(end1>0&&end2>0)
-					castlist.add(sb.substring(end1+1,end2));
-				fs=sb.indexOf("<img",fs)+4;
-			}
-
+		Pattern re=Pattern.compile("class=\"cast_list\"(.*?)</table>",
+				Pattern.MULTILINE|Pattern.DOTALL);
+		Matcher m=re.matcher(sb.toString());
+		if(!m.find()) {
+			return castlist;
+		}
+		Pattern re1=Pattern.compile("title=\"([^\"]+)\".*?loadlate=\"([^\"]+)\".*?/character/[^>]+>([^<]+)</a>",
+				Pattern.MULTILINE|Pattern.DOTALL);
+		Matcher m1=re1.matcher(m.group(1));
+		while(m1.find()) {
+			String p=m1.group(2);
+			p=p.replaceAll("SX32","SX214").replaceAll("32,44_", "214,314_");
+			p=p.replaceAll("SY44","SY314");
+			castlist.add(p);
+			castlist.add(m1.group(1));
+			castlist.add(m1.group(3));
 		}
 		return castlist;
-		
 	}
+	
 	public String getTvShow() {return "tv series";}
 	public String getCharSet() {return "UTF-8";}
 	public String getGoogleSearchSite()
