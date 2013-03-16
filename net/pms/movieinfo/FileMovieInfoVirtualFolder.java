@@ -328,12 +328,12 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	private void displayCast(MovieInfoVirtualFolder fld) {
 		if (!castlist.isEmpty() && castlist != null) {
 			String temp = showtags ? "Cast: " : "";
-			String plot1 =null;
+			String plot1 = null;
 			String act = "";
 			int a = 0;
 			while (!castlist.isEmpty() && a++ < numberOfActors) {
 				if(castlist.get(0) != null)
-				plot1 = castlist.remove(0);//.replaceAll("S[X,Y][0-9]{2}_S[X,Y][0-9]{2}_", "SX300_SY300_").replace("http://i.media-imdb.com/images/tn15/addtiny.gif","http://i.media-imdb.com/images/nophoto.jpg");
+				plot1 = castlist.remove(0);
 				act = clean(castlist.remove(0));
 				String label = (cellwrap != 0 ? "" : temp) + act + (castlist.get(0) == "" ? "" : " as ") + clean(castlist.remove(0));
 				fld = (new MovieInfoVirtualFolder((cellwrap != 0 ? wrap(label) : label), plot1));
@@ -484,11 +484,11 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 				}
 				u = new URL(url);
 				//u = new URL("http://www.imdb.com/title/" + key + "/");
-				logger.debug("MovieInfo - Resolved link for gathering data: " + u);
+				logger.info("{MovieInfo plugin} - Resolved link for gathering data: " + u);
 			} else {
 				mname = mname.replace(" ", "+");
 				u = new URL(("http://www.google.com/search?hl=" + ilanguage + "&q=" + mname + "+site%3A" + searchURL));
-				logger.debug("MovieInfo - SEARCH link sent to GOOGLE: " + u);
+				logger.info("{MovieInfo plugin} - SEARCH link sent to GOOGLE: " + u);
 			}
 			String host = u.getHost();
 			String file = u.toString().replace("http://" + u.getHost(), "");
