@@ -189,7 +189,7 @@ public class MovieDB extends VirtualFolder implements Runnable {
 			ps = conn.prepareStatement("INSERT INTO FILES(FILENAME, IMDB, OSHASH,GENRE, TITLE, DIRECTOR, RATING, AGERATING, THUMB) VALUES (?,?, ?, ?, ?, ?, ?, ?,?)",
 									   Statement.RETURN_GENERATED_KEYS);
 			ps1 = conn.prepareStatement("INSERT INTO CAST(CAST, MOVIE, THUMB) VALUES (?,?,?)");
-			String[] tmp=genres.split(",");
+			String[] tmp=genres.split(",|/");
 			for(int i=0;i<tmp.length;i++) {
 				ps.setString(1, file);
 				ps.setString(2, imdb);
