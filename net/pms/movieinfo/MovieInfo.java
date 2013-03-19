@@ -54,6 +54,7 @@ public class MovieInfo implements AdditionalFolderAtRoot,
 	private String DisplayInfo="title,rating,tagline,genre,plot,cast,director";
 	private String Linelength="60";
 	private String Filter="filter";
+	private MovieInfoCfg cfg;
 	
 	public void addAdditionalFolder(DLNAResource currentResource, DLNAResource child) {
 		if(child instanceof RealFile) {
@@ -290,13 +291,20 @@ public class MovieInfo implements AdditionalFolderAtRoot,
 	}
 	
 	private MovieDB mdb;
+	private static MovieInfo inst;
 	
 	public MovieInfo() {
+		inst = this;
 		PMS.info("Starting MovieInfo");
 		mdb=null;
+		cfg=new MovieInfoCfg();
 		if(movieDB()){
 			mdb=new MovieDB();
 		}
+	}
+	
+	public static MovieInfoCfg cfg() {
+		return inst.cfg;
 	}
 	
 	public static boolean movieDB() {
@@ -309,6 +317,10 @@ public class MovieInfo implements AdditionalFolderAtRoot,
 	@Override
 	public DLNAResource getChild() {
 		return mdb;
+	}
+	
+	public static MovieDB getDB() {
+		return inst.mdb;
 	}
 
 }

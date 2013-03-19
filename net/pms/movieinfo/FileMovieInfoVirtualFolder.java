@@ -67,6 +67,8 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	private String cookie;
 	private DLNAResource origRes;
 	private String hash;
+	private MovieInfo parent;
+	private Plugin plug;
 
 	private int cellwrap = 0;
 	private boolean showtags = true;
@@ -82,10 +84,18 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	@Override
 	public void resolve() {
 		super.resolve();
-		gather();
+		getConfig();
+		if(plug!=null) 
+			transferData(plug);
+		else
+			gather();
 		MovieInfoVirtualFolder fld = null;
 		display(fld);
 		resolved = true;
+	}
+	
+	public void setPlugin(Plugin p) {
+		plug=p;
 	}
 
 	public void gather() {
@@ -93,7 +103,6 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 			nfoId=MovieInfo.extractImdb(origRes);
 
 		if (!resolved && getChildren().size() == 0) {
-			getConfig();
 			String name=getName();
 			if(getParent()!=null) {
 				if (getParent().getParent().getParent().getName().contains("[DVD ISO]"))
@@ -161,22 +170,26 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 				}
 			}
 			if (nfo != null) {
-				title = plugin.getTitle();
-				thumb = plugin.getVideoThumbnail();
-				trailer = plugin.getTrailerURL();
-				rating = plugin.getRating();
-				genre = plugin.getGenre();
-				plot = plugin.getPlot();
-				dir = plugin.getDirector();
-				castlist = plugin.getCast();
-				tagline = plugin.getTagline();
-				agerating = plugin.getAgeRating();
+				transferData(plugin);
 			}
 			MovieDB.add(origRes, nfoId, 
 					genre, title, rating, 
 					dir,agerating,castlist,
-					thumb,hash);
+					thumb,hash,plot,tagline);
 		}
+	}
+	
+	private void transferData(Plugin plugin) {
+		title = plugin.getTitle();
+		thumb = plugin.getVideoThumbnail();
+		trailer = plugin.getTrailerURL();
+		rating = plugin.getRating();
+		genre = plugin.getGenre();
+		plot = plugin.getPlot();
+		dir = plugin.getDirector();
+		castlist = plugin.getCast();
+		tagline = plugin.getTagline();
+		agerating = plugin.getAgeRating();
 	}
 	
 	public void setHash(String h) {
@@ -212,42 +225,13 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 			} else {
 				fld = new MovieInfoVirtualFolder(wrapKerned(title.toUpperCase(), 1.2), thumb);
 			}
-			if (thumb != null)
+			if (thumb != null) 
 				fld.addChild(new MovieInfoVirtualData(title, thumb.replaceAll("S[X,Y][0-9]{2,3}_S[X,Y][0-9]{2,3}_", "SX300_SY300_")));
-			if(cover.equals("1")) {
-				File f = null;
-				if (!isDVD && className.equals(priority))
-					try {
-						f = new File((StringUtils.isNotBlank(thumbfolder) ? thumbfolder : getParent().getParent().getParent().getSystemName()) + File.separator + getParent().getName() + ".cover.jpg");
-						if (!f.exists() && f.isAbsolute()) {
-
-							URL url = null;
-							if(thumb != null && thumb.matches("S[X,Y][0-9]{2,3}_S[X,Y][0-9]{2,3}_"))
-								thumb = thumb.replaceAll("S[X,Y][0-9]{2,3}_S[X,Y][0-9]{2,3}_","SX300_SY300_");
-							if(thumb != null) {
-								url = new URL(thumb);
-								ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-								URLConnection conn;
-								conn = url.openConnection();
-								InputStream in = conn.getInputStream();
-								FileOutputStream fOUT = null;
-								if (f != null) {
-									fOUT = new FileOutputStream(f);
-									byte buf[] = new byte[4096];
-									int n = -1;
-									while ((n = in.read(buf)) > -1) {
-										bytes.write(buf, 0, n);
-										if (fOUT != null)
-											fOUT.write(buf, 0, n);
-									}
-									in.close();
-									if (fOUT != null)
-										fOUT.close();
-								}
-							}
-						}
-					} catch (IOException e) {
-					}
+			if (!isDVD && className.equals(priority)) {
+				File f = new File((StringUtils.isNotBlank(thumbfolder) ? thumbfolder : getParent().getParent().getParent().getSystemName()) + File.separator + getParent().getName() + ".cover.jpg");
+				if(cover.equals("1")) {
+					saveCover(f);
+				}
 			}
 			if (className.equals("IMDB")) {
 				if(trailer != null)
@@ -255,6 +239,42 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 			}
 			addChild(fld);
 		} 	
+	}
+	
+	public void saveCover(File f) {
+		saveCover(f,thumb);
+	}
+	
+	public void saveCover(File f,String tUrl) {		
+		if (!f.exists() && f.isAbsolute()) {
+			URL url = null;
+			if(tUrl != null && tUrl.matches("S[X,Y][0-9]{2,3}_S[X,Y][0-9]{2,3}_"))
+				tUrl = tUrl.replaceAll("S[X,Y][0-9]{2,3}_S[X,Y][0-9]{2,3}_","SX300_SY300_");
+			if(tUrl != null) {
+				try {
+					url = new URL(tUrl);
+					ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+					URLConnection conn;
+					conn = url.openConnection();
+					InputStream in = conn.getInputStream();
+					FileOutputStream fOUT = null;
+					if (f != null) {
+						fOUT = new FileOutputStream(f);
+						byte buf[] = new byte[4096];
+						int n = -1;
+						while ((n = in.read(buf)) > -1) {
+							bytes.write(buf, 0, n);
+							if (fOUT != null)
+								fOUT.write(buf, 0, n);
+						}
+						in.close();
+						if (fOUT != null)
+							fOUT.close();
+					}
+				} catch (IOException e) {
+				}
+			}
+		}
 	}
 
 	private void displayRating(MovieInfoVirtualFolder fld) {
@@ -345,6 +365,8 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	}
 
 	private void addInfo(String tag, String s) {
+		if(StringUtils.isEmpty(s))
+			return;
 		if (showtags)
 			s = tag + s;
 		if (cellwrap > 0) {
@@ -711,6 +733,10 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 		nfoId = r.imdbId;
 		thumbfolder = r.thumbfolder;
 		origRes = r.getOriginal();
+	}
+	
+	public void setParent(MovieInfo mi) {
+		parent=mi;
 	}
 
 }

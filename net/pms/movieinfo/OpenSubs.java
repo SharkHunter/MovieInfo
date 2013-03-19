@@ -155,9 +155,18 @@ public class OpenSubs {
 			"<param>\n<value>\n<array>\n<data>\n<value><string>" + hash + "</string></value>\n" +
 			"</data>\n</array>\n</value>\n</param>" +
 			"</params>\n</methodCall>\n";
-		Pattern re = Pattern.compile("MovieImdbID.*?<string>([^<]+)</string>", Pattern.DOTALL);
-		Matcher m = re.matcher(postPage(url.openConnection(), req));
+		Pattern re = Pattern.compile("MovieImdbID.*?<string>[^<]+</string>.*?MovieKind.*?<string>tv series</string>.*?"+
+				"MovieImdbID.*?<string>([^<]+)</string>.*?MovieKind.*?<string>episode</string>", 
+				Pattern.DOTALL);
+		Pattern re2 = Pattern.compile("MovieImdbID.*?<string>([^<]+)</string>",Pattern.DOTALL);
+		//Pattern re1 = Pattern.compile("MovieKind.*?<string>([^<]+)</string>", Pattern.DOTALL);
+		String page = postPage(url.openConnection(), req);
+		Matcher m = re.matcher(page);
 		if (m.find()) {
+			return m.group(1);
+		}
+		m = re2.matcher(page);
+		if(m.find()) {
 			return m.group(1);
 		}
 		return "";

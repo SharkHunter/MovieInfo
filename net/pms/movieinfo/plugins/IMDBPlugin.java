@@ -97,12 +97,11 @@ public class IMDBPlugin implements Plugin
 	}
 	@Override
 	public String getAgeRating() {
-		fs = sb.indexOf("itemprop=\"contentRating\">");
-		String agerating = null;
-		if (fs > -1) {
-			agerating = sb.substring(fs + 25, sb.indexOf("<", fs + 25));
-		}
-		return agerating;
+		Pattern re=Pattern.compile("itemprop=\"contentRating\" content=\"([^\"]+)\"");
+		Matcher m=re.matcher(sb.toString());
+		if(m.find())
+			return m.group(1);
+		return null;
 	}
 	public String getRating()
 	{
@@ -134,6 +133,7 @@ public class IMDBPlugin implements Plugin
 		Pattern re1=Pattern.compile("title=\"([^\"]+)\".*?loadlate=\"([^\"]+)\".*?/character/[^>]+>([^<]+)</a>",
 				Pattern.MULTILINE|Pattern.DOTALL);
 		Matcher m1=re1.matcher(m.group(1));
+		//logger.debug("looking for cast in "+m.group(1));
 		while(m1.find()) {
 			String p=m1.group(2);
 			p=p.replaceAll("SX32","SX214").replaceAll("32,44_", "214,314_");

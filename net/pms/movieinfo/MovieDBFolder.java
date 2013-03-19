@@ -11,8 +11,11 @@ import java.util.TreeMap;
 
 import org.apache.commons.lang.StringUtils;
 import org.h2.jdbcx.JdbcConnectionPool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.pms.PMS;
+import net.pms.dlna.DLNAResource;
 import net.pms.dlna.MapFile;
 import net.pms.dlna.RealFile;
 import net.pms.dlna.virtual.VirtualFolder;
@@ -26,6 +29,7 @@ public class MovieDBFolder extends VirtualFolder {
 	private boolean cast;
 	private int atz;
 	private boolean sort;
+	private static final Logger logger = LoggerFactory.getLogger(MovieDBFolder.class);
 	
 	public MovieDBFolder(String name, String sql) {
 		this(name,sql,false,"",null);
@@ -65,7 +69,8 @@ public class MovieDBFolder extends VirtualFolder {
 			if(StringUtils.isNotEmpty(val)) 
 				ps.setString(1, val);
 			rs = ps.executeQuery();
-			HashMap<String,String> map=new HashMap<String,String>();
+			HashMap<String,DLNAResource> map=new HashMap<String,DLNAResource>();
+			TreeMap<String,ArrayList<DLNAResource>> letters=new TreeMap<String,ArrayList<DLNAResource>>();
 			while (rs.next()) {
 				String nxtName;
 				String thumb=null;
@@ -93,10 +98,14 @@ public class MovieDBFolder extends VirtualFolder {
 						continue;
 					if(StringUtils.isEmpty(title))
 						title=nxtName;	
-					map.put(nxtName, "");
 					WrapperFile f=new WrapperFile(new File(nxtName),title);
 					f.setThumb(thumb);
-					addChild(f);
+					map.put(nxtName, f);
+					ArrayList<DLNAResource> l=letters.get(""+nxtName.charAt(0));
+					if(l==null)
+						l=new ArrayList<DLNAResource>();
+					l.add(f);
+					letters.put(""+nxtName.charAt(0),l);
 				}
 				else {
 					nxtName= rs.getString(name);
@@ -106,16 +115,39 @@ public class MovieDBFolder extends VirtualFolder {
 						continue;
 					if(map.containsKey(nxtName))
 						continue;
-					map.put(nxtName, "");
 					String nxtsql;
 					if(cast)
 						nxtsql="SELECT MOVIE FROM CAST WHERE CAST = ?";
 					else
 						nxtsql="SELECT FILENAME,THUMB,TITLE FROM FILES WHERE "+name+" = ?";
 					MovieDBFolder f=new MovieDBFolder(nxtName,nxtsql,true,nxtName,
-													  thumb);
+							thumb);
 					f.cast=cast;
-					addChild(f);
+					map.put(nxtName,f);
+					ArrayList<DLNAResource> l=letters.get(""+nxtName.charAt(0));
+					if(l==null)
+						l=new ArrayList<DLNAResource>();
+					l.add(f);
+					letters.put(""+nxtName.charAt(0),l);
+				}
+			}
+			if(map.size() < 20) {
+				// simple case
+				for(String s : map.keySet()) {
+					addChild(map.get(s));
+				}
+			}
+			else {
+				for(String c : letters.keySet()) {
+					final ArrayList<DLNAResource> l=letters.get(c);
+					final VirtualFolder vf=new VirtualFolder(c,"") {
+						public void discoverChildren() {
+							for(DLNAResource r : l) {
+								addChild(r);
+							}
+						}
+					};
+					addChild(vf);
 				}
 			}
 		} catch (Exception e) {

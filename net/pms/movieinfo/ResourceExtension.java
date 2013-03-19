@@ -10,7 +10,9 @@ import org.slf4j.LoggerFactory;
 
 import net.pms.PMS;
 import net.pms.dlna.DLNAResource;
+import net.pms.dlna.RealFile;
 import net.pms.dlna.virtual.VirtualFolder;
+import net.pms.movieinfo.plugins.Plugin;
 import net.pms.configuration.PmsConfiguration;
 
 public class ResourceExtension {
@@ -37,6 +39,8 @@ public class ResourceExtension {
 	}
 	
 	public void addChild(DLNAResource child) {
+		if(MovieDB.movieDBParent(child))
+			return;
 		if (child.getExt().isVideo() && child.isTranscodeFolderAvailable()) {
 			VirtualFolder vf2 = null;
 			for(DLNAResource r:original.getChildren()) {
@@ -48,6 +52,16 @@ public class ResourceExtension {
 			if (vf2 == null) {
 				vf2 = new MovieInfoVirtualFolder(null);
 				original.addChild(vf2);
+			}
+			if(MovieInfo.getDB() != null) {
+				RealFile rf = (RealFile)child;
+				Plugin plugin = MovieInfo.getDB().findInDB(rf.getFile().getAbsolutePath());
+				if(plugin!=null) {
+					FileMovieInfoVirtualFolder fmf = new FileMovieInfoVirtualFolder(child.getName(),null,this);
+					fmf.setPlugin(plugin);
+					vf2.addChild(fmf);
+					return;
+				}
 			}
 			VirtualFolder fileFolder2 = new MovieInfoVirtualFolder(child.getName(), null);
 			getOptions();
