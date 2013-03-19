@@ -210,8 +210,13 @@ public class MovieDB extends VirtualFolder {
 			conn = cp.getConnection();
 			ps = conn.prepareStatement("INSERT INTO FILES(FILENAME, IMDB, OSHASH,GENRE, TITLE, DIRECTOR, RATING, AGERATING, THUMB,PLOT,TAGLINE) VALUES (?,?,?,?, ?, ?, ?, ?, ?, ?,?)",
 									   Statement.RETURN_GENERATED_KEYS);
+<<<<<<< HEAD
 			ps1 = conn.prepareStatement("INSERT INTO CAST(CAST, MOVIE, THUMB,CHAR) VALUES (?,?,?,?)");
+			String[] tmp=genres.split(",");
+=======
+			ps1 = conn.prepareStatement("INSERT INTO CAST(CAST, MOVIE, THUMB) VALUES (?,?,?)");
 			String[] tmp=genres.split(",|/");
+>>>>>>> 905fd83f034d8f54374b2a2c820ed73e79bd71d7
 			for(int i=0;i<tmp.length;i++) {
 				ps.setString(1, file);
 				ps.setString(2, imdb);
