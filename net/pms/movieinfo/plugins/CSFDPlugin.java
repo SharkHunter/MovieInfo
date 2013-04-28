@@ -109,10 +109,14 @@ public class CSFDPlugin implements Plugin
 	}
 	public String getVideoThumbnail()
 	{
-		fs = sb.indexOf("<meta property=\"og:image\" content=\"");
+		fs = sb.indexOf("<div id=\"poster\" class=\"image\">");
+		fs = sb.indexOf("<img src=\"", fs);
 		String thumb = null;
 		if (fs >-1){
-		thumb = sb.substring(fs + 35, sb.indexOf("\"",fs + 35));	
+			thumb = sb.substring(fs + 10, sb.indexOf("\" alt=\"poster\"",fs + 10));
+			if (thumb.contains("poster-free.png")) {
+				thumb = null;
+			}
 		}
 		return thumb;
 	}
