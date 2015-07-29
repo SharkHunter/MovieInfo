@@ -10,8 +10,6 @@ import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import net.pms.PMS;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +19,7 @@ public class IMDBPlugin implements Plugin
 	private StringBuffer sb;
 	private ArrayList<String> castlist = new ArrayList<String>();
 	private String newURL;
-	private static final Logger logger = LoggerFactory.getLogger(IMDBPlugin.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(IMDBPlugin.class);
 
 	public void importFile(BufferedReader in)
 	{
@@ -39,12 +37,12 @@ public class IMDBPlugin implements Plugin
 		} catch (IOException e) {
 		}
 	}
-	public String getTitle() 
+	public String getTitle()
 	{
 		String title = null;
 		if (sb!=null){
 		fs = sb.indexOf("<title>");
-		
+
 		if (fs > -1) {
 			title = sb.substring(fs + 7, sb.indexOf("</title>", fs));
 		}
@@ -133,7 +131,7 @@ public class IMDBPlugin implements Plugin
 		Pattern re1=Pattern.compile("title=\"([^\"]+)\".*?loadlate=\"([^\"]+)\".*?/character/[^>]+>([^<]+)</a>",
 				Pattern.MULTILINE|Pattern.DOTALL);
 		Matcher m1=re1.matcher(m.group(1));
-		//logger.debug("looking for cast in "+m.group(1));
+		//LOGGER.debug("Looking for cast in: {}", m.group(1));
 		while(m1.find()) {
 			String p=m1.group(2);
 			p=p.replaceAll("SX32","SX214").replaceAll("32,44_", "214,314_");
@@ -144,7 +142,7 @@ public class IMDBPlugin implements Plugin
 		}
 		return castlist;
 	}
-	
+
 	public String getTvShow() {return "tv series";}
 	public String getCharSet() {return "UTF-8";}
 	public String getGoogleSearchSite()
@@ -176,7 +174,7 @@ public class IMDBPlugin implements Plugin
 		}
 		return newURL; //To use as ###MOVIEID### in getVideoURL()
 	}
-	
+
 	public String getTrailerURL() {
 		Pattern re=Pattern.compile("href=\"(/video[^\\?]+)\\?[^\"]+\"");
 		Matcher m=re.matcher(sb.toString());
@@ -203,11 +201,11 @@ public class IMDBPlugin implements Plugin
 			return rtmp+" playpath="+id+" swfVfy=1 swfUrl=http://www.imdb.com/images/js/app/video/mediaplayer.swf";
 		}
 		catch (Exception e) {
-			logger.debug("error "+e);
+			LOGGER.debug("error "+e);
 			return null;
 		}
 	}
-	
+
 	private String findTrailerData(String field,String page) {
 		Pattern re=Pattern.compile("addVariable\\(\""+field+"\"[^\"]+\"([^\"]+)\"\\);");
 		Matcher m=re.matcher(page);
@@ -215,10 +213,10 @@ public class IMDBPlugin implements Plugin
 			return unescape(m.group(1));
 		return null;
 	}
-	
+
 	private String unescape(String str) {
 		try {
-			logger.debug("unesc "+str);
+			LOGGER.debug("unesc "+str);
 			return URLDecoder.decode(str,"UTF-8");
 		} catch (Exception e) {
 		}

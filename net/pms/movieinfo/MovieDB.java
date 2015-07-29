@@ -30,27 +30,25 @@ public class MovieDB extends VirtualFolder {
 	private Thread scanner;
 	private int dbCount;
 	private String scanPath;
-	private static final Logger logger = LoggerFactory.getLogger(MovieDB.class);
-	
-	private static String[] KeyWords = { "Genre", "Title", "Director", 
+	private static final Logger LOGGER = LoggerFactory.getLogger(MovieDB.class);
+
+	private static String[] KeyWords = { "Genre", "Title", "Director",
 										 "Rating", "AgeRating"};
-	
+
 	public MovieDB() {
 		super("MovieDB", null);
 		setupTables();
 	}
-	
+
 	public static JdbcConnectionPool getDBConnection() {
 		/* This is take from DLNAMediaDb*/
 		String url;
 		String dbName;
 		String dir = "database";
 		dbName = "movieDB";
-		File fileDir = new File(dir);
 		if (Platform.isWindows()) {
 			String profileDir = PMS.getConfiguration().getProfileDirectory();
 			url = String.format("jdbc:h2:%s\\%s/%s", profileDir, dir, dbName);
-			fileDir = new File(profileDir, dir);
 		} else {
 			url = Constants.START_URL + dir + "/" + dbName;
 		}
@@ -60,24 +58,24 @@ public class MovieDB extends VirtualFolder {
 		ds.setPassword("");
 		return JdbcConnectionPool.create(ds);
 	}
-	
+
 	private void executeUpdate(Connection conn, String sql) throws SQLException {
 		if (conn != null) {
 			Statement stmt = conn.createStatement();
 			stmt.executeUpdate(sql);
 		}
 	}
-	
+
 	private static void close(Connection conn) {
 		try {
 			if (conn != null) {
 				conn.close();
 			}
 		} catch (SQLException e) {
-			PMS.info("close error "+e);
+			LOGGER.info("Close error: {}", e);
 		}
 	}
-	
+
 	private void setupTables() {
 		JdbcConnectionPool cp=getDBConnection();
 		Connection conn =null;
@@ -92,14 +90,14 @@ public class MovieDB extends VirtualFolder {
 			}
 			rs.close();
 			stmt.close();
-			if(dbCount != -1) { 
+			if(dbCount != -1) {
 				/* tables exist, just return */
 				//dumpTable();
 				close(conn);
 				return;
 			}
 		} catch (Exception e) {
-			PMS.info("setup tabe error "+e);
+			LOGGER.info("Setup table error: {}", e);
 		} finally {
 			close(conn);
 		}
@@ -113,7 +111,7 @@ public class MovieDB extends VirtualFolder {
 			sb.append(", OSHASH          VARCHAR2(1024)       NOT NULL");
 			sb.append(", THUMB         VARCHAR2(1024)");
 			sb.append(", TAGLINE         VARCHAR2(1024)");
-			sb.append(", PLOT         VARCHAR2(2048)");			
+			sb.append(", PLOT         VARCHAR2(2048)");
 			for(String word : KeyWords) {
 				sb.append(", "+word+"                VARCHAR2(1024)");
 			}
@@ -129,12 +127,12 @@ public class MovieDB extends VirtualFolder {
 			sb.append(", primary key (ID))");
 			executeUpdate(conn, sb.toString());
 		} catch (SQLException se) {
-			PMS.info("create mi tb error "+se);
+			LOGGER.info("Create mi tb error {}", se);
 		} finally {
 			close(conn);
 		}
 	}
-	
+
 	private boolean dispFilter(String str) {
 		String[] disp = MovieInfo.cfg().getDisplay();
 		if(disp==null || disp.length==0)
@@ -144,8 +142,8 @@ public class MovieDB extends VirtualFolder {
 				return false;
 		return true;
 	}
-	
-	public void discoverChildren() { 	
+
+	public void discoverChildren() {
 		for(String word : KeyWords) {
 			if(dispFilter(word))
 				continue;
@@ -160,24 +158,24 @@ public class MovieDB extends VirtualFolder {
 		m.cast();
 		addChild(m);
 	}
-	
+
 	private static String ucFirst(String str) {
 		char first=str.charAt(0);
 		return String.valueOf(first).toUpperCase()+str.substring(1);
 	}
-	
+
 	private static String fixStr(String s) {
 		if(StringUtils.isEmpty(s))
 			return "";
 		return ucFirst(s.trim());
 	}
-	
+
 	private static String fixRating(String r) {
 		int pos=r.indexOf("/");
 			r=r.substring(0,pos).trim();
 		return fixStr(r);
 	}
-	
+
 	public static void add(DLNAResource res,String imdb,String genres,
 			   String title,String rating,
 			   String director,String agerating,
@@ -191,8 +189,8 @@ public class MovieDB extends VirtualFolder {
 					thumb,hash,plot,tag);
 		}
 	}
-	
-	
+
+
 	public static void add(String file,String imdb,String genres,
 						   String title,String rating,
 						   String director,String agerating,
@@ -242,7 +240,7 @@ public class MovieDB extends VirtualFolder {
 				ps1.executeUpdate();
 			}
 		} catch (Exception e) {
-			PMS.info("insert into mdb "+e);
+			LOGGER.info("Insert into mdb: {}", e);
 		} finally {
 			try {
 				if(ps!=null)
@@ -252,12 +250,12 @@ public class MovieDB extends VirtualFolder {
 				if(rs!=null)
 					rs.close();
 			} catch (SQLException e) {
-				PMS.info("error insert");
+				LOGGER.info("Insert error: {}", e);
 			}
 			close(conn);
 		}
 	}
-	
+
 	public MovieDBPlugin findInDB(String name) {
 		Connection conn = null;
 		PreparedStatement ps = null;
@@ -290,7 +288,7 @@ public class MovieDB extends VirtualFolder {
 				}
 			}
 		} catch (Exception e) {
-			logger.debug("got exception in findindb "+e);
+			LOGGER.debug("got exception in findindb {}", e);
 		}
 		finally {
 			try {
@@ -301,7 +299,7 @@ public class MovieDB extends VirtualFolder {
 				if(rs!=null)
 					rs.close();
 			} catch (SQLException e) {
-				PMS.info("error insert");
+				LOGGER.info("Insert error: {}", e);
 			}
 		}
 		close(conn);
@@ -310,14 +308,14 @@ public class MovieDB extends VirtualFolder {
 
 	public synchronized void stopScanLibrary() {
 		if (scanner != null && scanner.isAlive()) {
-			
+
 		}
 	}
-	
+
 	public synchronized boolean isScanLibraryRunning() {
 		return scanner != null && scanner.isAlive();
 	}
-	
+
 	public synchronized void scanLibrary(String path) {
 		if(!MovieInfo.movieDB())
 			return;
@@ -333,7 +331,7 @@ public class MovieDB extends VirtualFolder {
 				if(scanner==null) // weird
 					return;
 				if(StringUtils.isEmpty(scanPath))
-					dirs=PMS.get().getFoldersConf();
+					dirs=PMS.get().getSharedFoldersArray(false);
 				else {
 					String[] foldersArray = scanPath.split(",");
 					dirs=new File[foldersArray.length];
@@ -342,7 +340,7 @@ public class MovieDB extends VirtualFolder {
 					}
 				}
 				for(File f : dirs) {
-					PMS.info("scan dir "+f.getAbsolutePath());
+					LOGGER.info("Scan dir {}", f.getAbsolutePath());
 					if(!f.exists())
 						continue;
 					scanDir(f,new ArrayList<File>());
@@ -358,7 +356,7 @@ public class MovieDB extends VirtualFolder {
 			scanner.start();
 		}
 	}
-	
+
 	private boolean alreadyScanned(File f) {
 		Connection conn = null;
 		PreparedStatement ps = null;
@@ -373,7 +371,7 @@ public class MovieDB extends VirtualFolder {
 			if(rs.next())
 				r= true;
 		} catch (Exception e) {
-			logger.debug("error in alread scaned "+e);
+			LOGGER.debug("Error in alread scanned: {}", e);
 		} finally {
 			try {
 				if(ps!=null)
@@ -383,17 +381,17 @@ public class MovieDB extends VirtualFolder {
 			} catch (SQLException e) {
 			}
 		}
-		close(conn);	
+		close(conn);
 		return r;
 	}
-	
+
 	private boolean recurse() {
 			String s=(String)PMS.getConfiguration().getCustomProperty("movieinfo.movieDB_recurse");
 			if(StringUtils.isNotEmpty(s))
 				return s.equalsIgnoreCase("true");
 			return false;
 	}
-	
+
 	private void scanDir(File dir,ArrayList<File> scanned) {
 		File[] files=dir.listFiles();
 		for(File f : files) {
@@ -401,19 +399,19 @@ public class MovieDB extends VirtualFolder {
 				if(f.isHidden())
 					continue;
 				if(f.isDirectory() && recurse()) {
-					if(!scanned.contains(f)) { 
+					if(!scanned.contains(f)) {
 						// don't scan dirs more than once
 						scanned.add(f);
 						scanDir(f,scanned);
 					}
 					continue;
 				}
-				Format form = FormatFactory.getAssociatedExtension(f.getAbsolutePath());
+				Format form = FormatFactory.getAssociatedFormat(f.getAbsolutePath());
 				if(form==null || !form.isVideo()) {
 					// skip this crap
 					continue;
 				}
-				
+
 				if(alreadyScanned(f)) {
 					continue;
 				}
@@ -422,7 +420,7 @@ public class MovieDB extends VirtualFolder {
 					continue;
 				String imdb=OpenSubs.fetchImdbId(hash);
 				if(StringUtils.isEmpty(imdb)) {
-					PMS.info("couldn't fetch imdbid "+f);
+					LOGGER.info("Couldn't fetch imdb-id {}", f);
 					continue;
 				}
 				if(!imdb.startsWith("tt"))
@@ -441,8 +439,8 @@ public class MovieDB extends VirtualFolder {
 			}
 		}
 	}
-	
-	private void dumpTable() {
+
+	/*private void dumpTable() {
 		Connection conn = null;
 		Statement stmt = null;
 		ResultSet rs = null;
@@ -451,20 +449,20 @@ public class MovieDB extends VirtualFolder {
 			conn = cp.getConnection();
 			stmt=conn.createStatement();
 			rs = stmt.executeQuery("SELECT * FROM FILES");
-			logger.debug("MovieDB:");
+			LOGGER.debug("MovieDB:");
 			while(rs.next()) {
-				logger.debug("file "+rs.getString("FILENAME"));
-				logger.debug("title "+rs.getString("TITLE"));
-				logger.debug("rating "+ rs.getString("RATING"));
-				logger.debug("agerating "+ rs.getString("AGERATING"));
-				logger.debug("thumb "+ rs.getString("THUMB"));
-				logger.debug("dir "+ rs.getString("DIRECTOR"));
-				logger.debug("id "+ rs.getInt("ID"));
-				logger.debug("tagline "+ rs.getString("TAGLINE"));
-				logger.debug("plot "+ rs.getString("PLOT"));
+				LOGGER.debug("file "+rs.getString("FILENAME"));
+				LOGGER.debug("title "+rs.getString("TITLE"));
+				LOGGER.debug("rating "+ rs.getString("RATING"));
+				LOGGER.debug("agerating "+ rs.getString("AGERATING"));
+				LOGGER.debug("thumb "+ rs.getString("THUMB"));
+				LOGGER.debug("dir "+ rs.getString("DIRECTOR"));
+				LOGGER.debug("id "+ rs.getInt("ID"));
+				LOGGER.debug("tagline "+ rs.getString("TAGLINE"));
+				LOGGER.debug("plot "+ rs.getString("PLOT"));
 			}
 		} catch (Exception e) {
-			PMS.info("error in dump "+e);
+			LOGGER.info("Error in dump: {}", e);
 		} finally {
 			try {
 				if(stmt!=null)
@@ -475,8 +473,8 @@ public class MovieDB extends VirtualFolder {
 			}
 		}
 		close(conn);
-	}
-	
+	}*/
+
 	public static boolean movieDBParent(DLNAResource start) {
 		DLNAResource tmp = start;
 		while(tmp!=null) {

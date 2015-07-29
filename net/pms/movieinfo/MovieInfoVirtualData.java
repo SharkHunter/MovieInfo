@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 public class MovieInfoVirtualData extends VirtualFolder {
 
 	private boolean done = false;
-	private static final Logger logger = LoggerFactory.getLogger(MovieInfoVirtualData.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(MovieInfoVirtualData.class);
 
 	public MovieInfoVirtualData(String thumbnailIcon) {
 		super(MovieInfoVirtualFolder.MOVIE_FOLDER, thumbnailIcon);
@@ -32,7 +32,7 @@ public class MovieInfoVirtualData extends VirtualFolder {
 	public boolean isFolder(){
 		return false;
 	}
-	public String getThumbnailURL(){	
+	public String getThumbnailURL(){
 		return thumbnailIcon;
 	}
 
@@ -62,7 +62,7 @@ public class MovieInfoVirtualData extends VirtualFolder {
 	private String getFfmpegPath() {
 		String value = PMS.getConfiguration().getFfmpegPath();
 		if (value == null) {
-			logger.trace("No ffmpeg - unable to thumbnail");
+			LOGGER.trace("No ffmpeg - unable to thumbnail");
 			throw new RuntimeException("No ffmpeg - unable to thumbnail");
 		} else {
 			return value;
@@ -99,11 +99,11 @@ public class MovieInfoVirtualData extends VirtualFolder {
 		failsafe.start();
 		pw.run();
 	}
-	
+
 	public InputStream getInputStream() throws IOException {
 //		System.out.println("getInputStream");
 		File f = null;
-		if(!done ){		
+		if(!done ){
 		thumbnailIcon = thumbnailIcon.replaceAll("SX300_SY300_","SX1920_SY1080_");
 		URL url = new URL(thumbnailIcon);
 			f = new File(PMS.getConfiguration().getTempFolder().getAbsolutePath()+ "\\01.jpg");
@@ -129,7 +129,7 @@ public class MovieInfoVirtualData extends VirtualFolder {
 				if(i < 10)tmp = "0" + i ;
 				else tmp = i + "";
 			  copy(f.getPath(),PMS.getConfiguration().getTempFolder().getAbsolutePath() +"\\"+ tmp + ".jpg");
-				
+
 			}
 
 		f = new File(PMS.getConfiguration().getTempFolder().getAbsolutePath()+ "\\image.mpg");
@@ -143,8 +143,7 @@ public class MovieInfoVirtualData extends VirtualFolder {
 			if(f.exists())
 			is = new FileInputStream(new File(f.getPath()));
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.debug("File {} not found: {}", f.getPath(), e);
 		}
 		//InputStream is = ClassLoader.getSystemResourceAsStream(fileName);
 		return is;
@@ -154,7 +153,7 @@ public class MovieInfoVirtualData extends VirtualFolder {
 
 	public static void copy(String from, String to) throws IOException{
 	   InputStream in = null;
-	   OutputStream out = null; 
+	   OutputStream out = null;
 	   try {
 	      in = new FileInputStream(from);
 	      out = new FileOutputStream(to);
@@ -164,9 +163,9 @@ public class MovieInfoVirtualData extends VirtualFolder {
 	            if (amountRead == -1) {
 	               break;
 	            }
-	            out.write(buffer, 0, amountRead); 
+	            out.write(buffer, 0, amountRead);
 	         }
-	      } 
+	      }
 	   } finally {
 	      if (in != null) {
 	         in.close();

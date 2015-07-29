@@ -14,10 +14,7 @@ import org.h2.jdbcx.JdbcConnectionPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.pms.PMS;
 import net.pms.dlna.DLNAResource;
-import net.pms.dlna.MapFile;
-import net.pms.dlna.RealFile;
 import net.pms.dlna.virtual.VirtualFolder;
 
 
@@ -27,14 +24,12 @@ public class MovieDBFolder extends VirtualFolder {
 	private boolean stop;
 	private String val;
 	private boolean cast;
-	private int atz;
-	private boolean sort;
-	private static final Logger logger = LoggerFactory.getLogger(MovieDBFolder.class);
-	
+	private static final Logger LOGGER = LoggerFactory.getLogger(MovieDBFolder.class);
+
 	public MovieDBFolder(String name, String sql) {
 		this(name,sql,false,"",null);
 	}
-	
+
 	public MovieDBFolder(String name, String sql,
 						 boolean stop,String val,String thumb) {
 		super(name, thumb);
@@ -42,22 +37,15 @@ public class MovieDBFolder extends VirtualFolder {
 		this.stop=stop;
 		this.val=val;
 		cast=false;
-		atz=0;
-		sort=false;
 	}
-	
+
 	public void cast() {
 		cast=true;
 	}
-	
+
 	public void atzLevel(int l) {
-		atz=l;
 	}
-	
-	public void setSort() {
-		sort=true;
-	}
-	
+
 	public void discoverChildren() {
 		Connection conn =null;
 		ResultSet rs = null;
@@ -66,7 +54,7 @@ public class MovieDBFolder extends VirtualFolder {
 		try {
 			conn = cp.getConnection();
 			ps=conn.prepareStatement(sql);
-			if(StringUtils.isNotEmpty(val)) 
+			if(StringUtils.isNotEmpty(val))
 				ps.setString(1, val);
 			rs = ps.executeQuery();
 			HashMap<String,DLNAResource> map=new HashMap<String,DLNAResource>();
@@ -97,7 +85,7 @@ public class MovieDBFolder extends VirtualFolder {
 					if(map.containsKey(nxtName))
 						continue;
 					if(StringUtils.isEmpty(title))
-						title=nxtName;	
+						title=nxtName;
 					WrapperFile f=new WrapperFile(new File(nxtName),title);
 					f.setThumb(thumb);
 					map.put(nxtName, f);
@@ -151,7 +139,7 @@ public class MovieDBFolder extends VirtualFolder {
 				}
 			}
 		} catch (Exception e) {
-			PMS.info("sql execption "+e);
+			LOGGER.info("SQL exception: {}", e);
 		} finally {
 			try {
 				if(rs!=null)
@@ -161,15 +149,15 @@ public class MovieDBFolder extends VirtualFolder {
 				if(conn!=null)
 					conn.close();
 			} catch (SQLException e) {
-				PMS.info("close error "+e);
+				LOGGER.info("Close error: {}", e);
 			}
 		}
 	}
-	
+
 	public boolean isRefreshNeeded() {
 		return true;
 	}
-	
+
 	public InputStream getThumbnailInputStream() {
 		try {
 			return downloadAndSend(thumbnailIcon,true);

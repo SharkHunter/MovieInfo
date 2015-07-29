@@ -16,7 +16,7 @@ import net.pms.movieinfo.plugins.Plugin;
 import net.pms.configuration.PmsConfiguration;
 
 public class ResourceExtension {
-	
+
 	private DLNAResource original;
 	private String plugins;
 	public int numberOfActors = 99;
@@ -28,20 +28,20 @@ public class ResourceExtension {
 	private PmsConfiguration configuration;
 	public String thumbfolder = "";
 	private static final Logger logger = LoggerFactory.getLogger(ResourceExtension.class);
-	
+
 	public ResourceExtension(DLNAResource original) {
 		this(original,"");
 	}
-	
+
 	public ResourceExtension(DLNAResource original,String imdb) {
 		this.original = original;
 		this.imdbId=imdb;
 	}
-	
+
 	public void addChild(DLNAResource child) {
 		if(MovieDB.movieDBParent(child))
 			return;
-		if (child.getExt().isVideo() && child.isTranscodeFolderAvailable()) {
+		if (child.getFormat().isVideo() && child.isTranscodeFolderAvailable()) {
 			VirtualFolder vf2 = null;
 			for(DLNAResource r:original.getChildren()) {
 				if (r instanceof MovieInfoVirtualFolder) {
@@ -77,19 +77,19 @@ public class ResourceExtension {
 			}
 		}
 	}
-	
-	private void getOptions() 
+
+	private void getOptions()
 	{
-		File miConf = new File("MOVIEINFO.conf"); 
+		File miConf = new File("MOVIEINFO.conf");
 		if (!miConf.exists())
-			miConf = new File("plugins/MOVIEINFO.conf"); 
+			miConf = new File("plugins/MOVIEINFO.conf");
 		if (miConf.exists()) {
 			try {
-				BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(miConf), "UTF-8")); 
+				BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(miConf), "UTF-8"));
 				String line = null;
 				while ((line=br.readLine()) != null) {
 					line = line.trim();
-					if (line.length() > 0 && !line.startsWith("#") && line.indexOf("=") > -1) { 
+					if (line.length() > 0 && !line.startsWith("#") && line.indexOf("=") > -1) {
 						if(line.startsWith("Plugins="))plugins = line.substring(line.indexOf("=")+1,line.length()).toUpperCase();
 						if(line.startsWith("NumberOfActors="))numberOfActors = Integer.parseInt(line.substring(line.indexOf("=")+1,line.length()));
 						if(line.startsWith("Linelength="))lineLength = Integer.parseInt(line.substring(line.indexOf("=")+1,line.length()));
@@ -105,7 +105,7 @@ public class ResourceExtension {
 		} else
 			logger.trace("MOVIEINFO.conf file not found!");
 	}
-	
+
 	public DLNAResource getOriginal() {
 		return original;
 	}

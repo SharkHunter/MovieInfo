@@ -8,41 +8,28 @@ import java.util.ArrayList;
 
 public class MovieInfoCfg {
 	private ArrayList<String> cleanlist = new ArrayList<String>();
-	private String filter;
 	private String[] disp;
 	private String cover;
-	private String priority;
-	private String ilanguage = "en";
-	private boolean removeyear = false;
-	private String dbPlug;
 
 	public MovieInfoCfg() {
 		readCfg();
 	}
 
 	private void readCfg() {
-		File miConf = new File("MOVIEINFO.conf"); 
+		File miConf = new File("MOVIEINFO.conf");
 		if (!miConf.exists())
 			miConf = new File("plugins/MOVIEINFO.conf");
 		if (miConf.exists()) {
 			try {
-				BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(miConf), "UTF-8")); 
+				BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(miConf), "UTF-8"));
 				String line = null;
-				filter = "";
 				String info = "";
 				cover = "";
 				if (!cleanlist.isEmpty())
-					cleanlist.clear();			
+					cleanlist.clear();
 				while ((line = br.readLine()) != null) {
 					line = line.trim();
-					if (line.length() > 0 && !line.startsWith("#") && line.indexOf("=") > -1) { 
-						if(line.startsWith("Filter="))
-							filter += line.substring(line.indexOf("=") + 2,line.lastIndexOf("\"")).toUpperCase();
-						if(line.startsWith("Plugins="))
-							if(line.indexOf(",") > -1)
-								priority = line.substring(line.indexOf("=") + 1,line.indexOf(",")).toUpperCase();
-							else
-								priority = line.substring(line.indexOf("=") + 1,line.length()).toUpperCase();
+					if (line.length() > 0 && !line.startsWith("#") && line.indexOf("=") > -1) {
 						if(line.startsWith("CleanDisplay=")) {
 							cleanlist.add(line.substring(22,line.indexOf("\"",22)));
 							cleanlist.add(line.substring(line.indexOf(".with(") + 7,line.lastIndexOf("\"")));
@@ -52,12 +39,6 @@ public class MovieInfoCfg {
 						}
 						if(line.startsWith("Cover=")) {
 							cover =(line.substring(6));
-						}
-						if(line.startsWith("ILanguage=")) {
-							ilanguage = line.substring(line.indexOf("=")+1,line.length()).toLowerCase();
-						}
-						if(line.startsWith("RemoveYear=")) {
-							removeyear = Boolean.parseBoolean(line.substring(line.indexOf("=")+1,line.length()));
 						}
 						if(line.startsWith("Cover="))
 							cover = line.substring(line.indexOf("=")+1,line.length());
@@ -73,7 +54,7 @@ public class MovieInfoCfg {
 			}
 		}
 	}
-	
+
 	public String getCover() {
 		return cover;
 	}
