@@ -135,7 +135,7 @@ public class OpenSubs {
 	}
 
 	public static String fetchImdbId(String hash) throws IOException {
-		LOGGER.debug("fetch imdbid for hash " + hash);
+		LOGGER.debug("{MovieInfo} Fetching IMDB id for hash {}", hash);
 		login();
 		if (token == null) {
 			return "";

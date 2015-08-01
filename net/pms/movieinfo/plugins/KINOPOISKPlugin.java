@@ -3,13 +3,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class KINOPOISKPlugin implements Plugin
 {
 	private int fs=-1;
 	private StringBuffer sb;
 	private String newURL;
-	private ArrayList<String> castlist = new ArrayList<String>();
+	private static final Logger LOGGER = LoggerFactory.getLogger(KINOPOISKPlugin.class);
 
 	public void importFile(BufferedReader in)
 	{
@@ -25,20 +27,20 @@ public class KINOPOISKPlugin implements Plugin
 				eachLine = br.readLine();
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during importFile: {}", getClass().getSimpleName(), e);
 		}
 	}
-	public String getTitle() 
+	public String getTitle()
 	{
 		if(sb != null)
 		fs = sb.indexOf("<title>");
 		String title = null;
 		if (fs > -1) {
 			title = sb.substring(fs + 7, sb.indexOf("</title>", fs));
-
 			//title = title.replace("CSFD.cz - ", "");
-		if (title.contains("404 Not Found"))title=null;
+
+			if (title.contains("404 Not Found")) title = null;
+			LOGGER.trace("{MovieInfo} {}: Parsed title: {}", getClass().getSimpleName(), title);
 		}
 		return title;
 	}
@@ -58,7 +60,7 @@ public class KINOPOISKPlugin implements Plugin
 	}
 	public String getGenre()
 	{
-		
+
 		fs = sb.indexOf("жанр</td><td class=\"desc-data\">");
 		String genre = null;
 		if (fs > -1) {
@@ -82,15 +84,15 @@ public class KINOPOISKPlugin implements Plugin
 		fs = sb.indexOf("<div style=\"color:#f60;font:800 23px tahoma, verdana\">");
 		if (fs > -1)
 			fs = sb.indexOf("class=\"continue\">",fs);
-			
+
 		String rating = null;
 		if (fs > -1) {
 			rating = sb.substring(fs + 17, sb.indexOf(
 					"</", fs+17));
-		
+
 		if (rating.trim().matches("[0-9]\\.[0-9]"))
 		rating = (Double.parseDouble(rating.trim())) + "";
-		
+
 		rating = rating + "/10";
 		}
 		return rating;
@@ -100,14 +102,14 @@ public class KINOPOISKPlugin implements Plugin
 		fs = sb.indexOf("<img src=\"/images/film/");
 		String thumb = null;
 		if (fs >-1){
-		thumb = sb.substring(fs+10, sb.indexOf("\"",fs+10));	
+		thumb = sb.substring(fs+10, sb.indexOf("\"",fs+10));
 		thumb = "http://www.kinopoisk.ru" + thumb;
 		}
 		return thumb;
 	}
-	public ArrayList<String> getCast()
+	public ArrayList<CastStruct> getCast()
 	{
-		return castlist;
+		return null;
 	}
 	public String getTvShow() {return "сериал";}
 	public String getCharSet() {return "windows-1251";}
@@ -141,25 +143,21 @@ public class KINOPOISKPlugin implements Plugin
 				if (fs > -1)
 					newURL = newURL.substring(0,fs);
 			}
-			
-			
+
+
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			//System.out.println("lookForImdbID Exception: " + e);
-			// e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during lookForMovieID: {}", getClass().getSimpleName(), e);
 		}
-		//System.out.println(this.getClass().getName() + "lookForMovieID Returns " + newURL);
+		LOGGER.trace("{MovieInfo} {}: lookForMoveiID returns: {}", getClass().getSimpleName(), newURL);
 		return newURL; //To use as ###MOVIEID### in getVideoURL()
 	}
 	@Override
 	public String getAgeRating() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 	@Override
 	public String getTrailerURL() {
-		// TODO Auto-generated method stub
 		return null;
 	}
-	
+
 }

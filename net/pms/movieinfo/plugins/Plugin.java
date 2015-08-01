@@ -13,7 +13,7 @@ public abstract interface Plugin {
 	public String getRating();
 	public String getAgeRating();
 	public String getVideoThumbnail();
-	public ArrayList<String> getCast();
+	public ArrayList<CastStruct> getCast();
 	public String getGoogleSearchSite();
 	public String lookForMovieID(BufferedReader in);
 	public String getVideoURL();

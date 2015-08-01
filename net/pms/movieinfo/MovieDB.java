@@ -8,7 +8,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.lang.StringUtils;
 import org.h2.engine.Constants;
@@ -16,15 +15,14 @@ import org.h2.jdbcx.JdbcConnectionPool;
 import org.h2.jdbcx.JdbcDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import com.sun.jna.Platform;
-
 import net.pms.PMS;
 import net.pms.dlna.DLNAResource;
 import net.pms.dlna.RealFile;
 import net.pms.dlna.virtual.VirtualFolder;
 import net.pms.formats.Format;
 import net.pms.formats.FormatFactory;
+import net.pms.movieinfo.plugins.CastStruct;
 
 public class MovieDB extends VirtualFolder {
 	private Thread scanner;
@@ -72,7 +70,7 @@ public class MovieDB extends VirtualFolder {
 				conn.close();
 			}
 		} catch (SQLException e) {
-			LOGGER.info("Close error: {}", e);
+			LOGGER.info("{MovieInfo} Close error: {}", e);
 		}
 	}
 
@@ -97,7 +95,7 @@ public class MovieDB extends VirtualFolder {
 				return;
 			}
 		} catch (Exception e) {
-			LOGGER.info("Setup table error: {}", e);
+			LOGGER.error("{MovieInfo} Setup table error: {}", e);
 		} finally {
 			close(conn);
 		}
@@ -127,14 +125,14 @@ public class MovieDB extends VirtualFolder {
 			sb.append(", primary key (ID))");
 			executeUpdate(conn, sb.toString());
 		} catch (SQLException se) {
-			LOGGER.info("Create mi tb error {}", se);
+			LOGGER.info("{MovieInfo} Create table error {}", se);
 		} finally {
 			close(conn);
 		}
 	}
 
 	private boolean dispFilter(String str) {
-		String[] disp = MovieInfo.cfg().getDisplay();
+		String[] disp = MovieInfo.configuration().getDisplayInfo();
 		if(disp==null || disp.length==0)
 			return false;
 		for(int i=0;i<disp.length;i++)
@@ -179,7 +177,7 @@ public class MovieDB extends VirtualFolder {
 	public static void add(DLNAResource res,String imdb,String genres,
 			   String title,String rating,
 			   String director,String agerating,
-			   ArrayList<String> cast,String thumb,
+			   ArrayList<CastStruct> cast,String thumb,
 			   String hash,String plot,String tag) {
 		if(res==null)
 			return;
@@ -194,7 +192,7 @@ public class MovieDB extends VirtualFolder {
 	public static void add(String file,String imdb,String genres,
 						   String title,String rating,
 						   String director,String agerating,
-						   ArrayList<String> cast,String thumb,
+						   ArrayList<CastStruct> cast,String thumb,
 						   String hash,String plot,String tag) {
 		if(!MovieInfo.movieDB())
 			return;
@@ -230,17 +228,15 @@ public class MovieDB extends VirtualFolder {
 			}
 			// Build Cast array
 			while(!cast.isEmpty()) {
-				String t=cast.remove(0);
-				String name=cast.remove(0);
-				String c=cast.remove(0);
-				ps1.setString(1, name);
+				CastStruct castEntry = cast.remove(0);
+				ps1.setString(1, castEntry.Actor == null ? "" : castEntry.Actor);
 				ps1.setInt(2, id);
-				ps1.setString(3, t);
-				ps1.setString(4, c);
+				ps1.setString(3, castEntry.Picture);
+				ps1.setString(4, castEntry.Character);
 				ps1.executeUpdate();
 			}
 		} catch (Exception e) {
-			LOGGER.info("Insert into mdb: {}", e);
+			LOGGER.debug("{MovieInfo} Insert into mdb: {}", e);
 		} finally {
 			try {
 				if(ps!=null)
@@ -250,7 +246,7 @@ public class MovieDB extends VirtualFolder {
 				if(rs!=null)
 					rs.close();
 			} catch (SQLException e) {
-				LOGGER.info("Insert error: {}", e);
+				LOGGER.error("{MovieInfo} Insert error: {}", e);
 			}
 			close(conn);
 		}
@@ -288,7 +284,7 @@ public class MovieDB extends VirtualFolder {
 				}
 			}
 		} catch (Exception e) {
-			LOGGER.debug("got exception in findindb {}", e);
+			LOGGER.debug("{MovieInfo} Exception caught in findindb: {}", e);
 		}
 		finally {
 			try {
@@ -299,7 +295,7 @@ public class MovieDB extends VirtualFolder {
 				if(rs!=null)
 					rs.close();
 			} catch (SQLException e) {
-				LOGGER.info("Insert error: {}", e);
+				LOGGER.error("{MovieInfo} Insert error: {}", e);
 			}
 		}
 		close(conn);
@@ -340,7 +336,7 @@ public class MovieDB extends VirtualFolder {
 					}
 				}
 				for(File f : dirs) {
-					LOGGER.info("Scan dir {}", f.getAbsolutePath());
+					LOGGER.info("{MovieInfo} Scan dir {}", f.getAbsolutePath());
 					if(!f.exists())
 						continue;
 					scanDir(f,new ArrayList<File>());
@@ -371,7 +367,7 @@ public class MovieDB extends VirtualFolder {
 			if(rs.next())
 				r= true;
 		} catch (Exception e) {
-			LOGGER.debug("Error in alread scanned: {}", e);
+			LOGGER.debug("{MovieInfo} Error in already scanned: {}", e);
 		} finally {
 			try {
 				if(ps!=null)
@@ -420,7 +416,7 @@ public class MovieDB extends VirtualFolder {
 					continue;
 				String imdb=OpenSubs.fetchImdbId(hash);
 				if(StringUtils.isEmpty(imdb)) {
-					LOGGER.info("Couldn't fetch imdb-id {}", f);
+					LOGGER.info("{MovieInfo} Couldn't fetch imdb-id {}", f);
 					continue;
 				}
 				if(!imdb.startsWith("tt"))
@@ -431,7 +427,7 @@ public class MovieDB extends VirtualFolder {
 													0,0,imdb,new RealFile(f));
 				fmf.setHash(hash);
 				fmf.gather();
-				if(MovieInfo.cfg().getCover().equals("1")) {
+				if (MovieInfo.configuration().getDownloadCover()) {
 					File cFile = new File(f.getAbsolutePath()+".cover.jpg");
 					fmf.saveCover(cFile);
 				}

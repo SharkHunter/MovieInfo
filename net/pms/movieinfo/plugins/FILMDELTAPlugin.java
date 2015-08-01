@@ -3,13 +3,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FILMDELTAPlugin implements Plugin
 {
 	private int fs;
 	private StringBuffer sb;
 	private String newURL;
-	private ArrayList<String> castlist = new ArrayList<String>();
+	private static final Logger LOGGER = LoggerFactory.getLogger(FILMDELTAPlugin.class);
 
 	public void importFile(BufferedReader in)
 	{
@@ -25,11 +27,10 @@ public class FILMDELTAPlugin implements Plugin
 				eachLine = br.readLine();
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during importFile: {}", getClass().getSimpleName(), e);
 		}
 	}
-	public String getTitle() 
+	public String getTitle()
 	{
 		if(sb != null)
 		fs = sb.indexOf("<title>");
@@ -37,6 +38,7 @@ public class FILMDELTAPlugin implements Plugin
 		if (fs > -1) {
 			title = sb.substring(fs + 7, sb.indexOf("</title>", fs));
 			title = title.replace(" - Filmdelta - Filmdatabas p&aring; svenska", "");
+			LOGGER.trace("{MovieInfo} {}: Parsed title: {}", getClass().getSimpleName(), title);
 			}
 		return title;
 	}
@@ -48,13 +50,13 @@ public class FILMDELTAPlugin implements Plugin
 			plot = sb.substring(fs + 18,sb.indexOf("</div>",fs+18));
 			plot = plot.replace("<p>", "").replace("</p>","");
 			plot = plot.trim();
-//			System.out.println(this.getClass().getSimpleName() + " " + plot);
+			LOGGER.trace("{MovieInfo} {}: Parsed plot: {}", getClass().getSimpleName(), plot);
 		}
 		return plot;
 	}
 	public String getDirector()
 	{
-		
+
 		return null;
 	}
 	public String getGenre()
@@ -74,7 +76,7 @@ public class FILMDELTAPlugin implements Plugin
 		if (fs > -1) {
 			rating = sb.substring(fs + 6, sb.indexOf("</", fs+6));
 			rating = rating.trim();
-		
+
 		if (rating.matches("[0-9]\\.{0,1}[0-9]{0,1}"))
 			rating = Double.parseDouble(rating)*2 + "";
 			rating += "/10";
@@ -85,9 +87,9 @@ public class FILMDELTAPlugin implements Plugin
 	{
 		return null;
 	}
-	public ArrayList<String> getCast()
+	public ArrayList<CastStruct> getCast()
 	{
-		return castlist;
+		return null;
 	}
 	public String getTvShow() {return "TV-Serie";}
 	public String getCharSet() {return "8859_1";}
@@ -116,13 +118,11 @@ public class FILMDELTAPlugin implements Plugin
 			if (fs > -1) {
 				newURL = temp.substring(fs + 30, end);
 			}
-			
+
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			//System.out.println("lookForImdbID Exception: " + e);
-			// e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during lookForMovieID: {}", getClass().getSimpleName(), e);
 		}
-		//System.out.println(this.getClass().getName() + "lookForMovieID Returns " + newURL);
+		LOGGER.trace("{MovieInfo} {}: lookForMoveiID returns: {}", getClass().getSimpleName(), newURL);
 		return newURL; //To use as ###MOVIEID### in getVideoURL()
 	}
 	@Override
@@ -135,5 +135,5 @@ public class FILMDELTAPlugin implements Plugin
 		// TODO Auto-generated method stub
 		return null;
 	}
-	
+
 }

@@ -8,13 +8,15 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.zip.GZIPInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class OFDBPlugin implements Plugin
 {
 	private int fs;
 	private StringBuffer sb;
 	private String newURL;
-	private ArrayList<String> castlist = new ArrayList<String>();
+	private static final Logger LOGGER = LoggerFactory.getLogger(OFDBPlugin.class);
 
 	public void importFile(BufferedReader in)
 	{
@@ -30,11 +32,10 @@ public class OFDBPlugin implements Plugin
 				eachLine = br.readLine();
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during importFile: {}", getClass().getSimpleName(), e);
 		}
 	}
-	public String getTitle() 
+	public String getTitle()
 	{
 		if(sb != null)
 		fs = sb.indexOf("<title>");
@@ -42,20 +43,22 @@ public class OFDBPlugin implements Plugin
 		if (fs > -1) {
 			title = sb.substring(fs + 7, sb.indexOf("</title>", fs));
 			title = title.replace("OFDb - ", "");
-			}
+			LOGGER.trace("{MovieInfo} {}: Parsed title: {}", getClass().getSimpleName(), title);
+		}
 		return title;
 	}
-//	public String getPlot()
-//	{
-//		fs = sb.indexOf("<b>Inhalt:</b>");
-//		String plot = null;
-//		if (fs > -1) {
-//			plot = sb.substring(fs + 14,sb.indexOf("<",fs+14));
-//			plot = plot.trim();
-//			System.out.println(this.getClass().getSimpleName() + " " + plot);
-//		}
-//		return plot;
-//	}
+
+	/*public String getPlot()
+	{
+		fs = sb.indexOf("<b>Inhalt:</b>");
+		String plot = null;
+		if (fs > -1) {
+			plot = sb.substring(fs + 14,sb.indexOf("<",fs+14));
+			plot = plot.trim();
+			LOGGER.trace("{MovieInfo} {}: Parsed plot: {}", getClass().getSimpleName(), plot);
+		}
+		return plot;
+	}*/
 	public String getPlot()
 	{
 		String plot = null;
@@ -64,19 +67,19 @@ public class OFDBPlugin implements Plugin
 		if (plot != null)
 		{
 			String sc = getSubSite(plot);
-		fs = sc.indexOf("</b><br><br>");
-		if (fs > -1) {
-			plot = sc.substring(fs + 12,sc.indexOf("</",fs+12));
-			plot = plot.replace("\n", "");
-			plot = plot.trim();
-//			System.out.println(this.getClass().getSimpleName() + " " + plot);
-		}
+			fs = sc.indexOf("</b><br><br>");
+			if (fs > -1) {
+				plot = sc.substring(fs + 12,sc.indexOf("</",fs+12));
+				plot = plot.replace("\n", "");
+				plot = plot.trim();
+				LOGGER.trace("{MovieInfo} {}: Parsed plot: {}", getClass().getSimpleName(), plot);
+			}
 		}
 		return plot;
 	}
 	public String getDirector()
 	{
-		
+
 		return null;
 	}
 	public String getGenre()
@@ -101,13 +104,13 @@ public class OFDBPlugin implements Plugin
 	{
 		String thumb = null;
 		fs = sb.indexOf("<img src=\"http://img.ofdb.de/film/");
-		if (fs > -1) 
+		if (fs > -1)
 			thumb = sb.substring(fs+10, sb.indexOf("\"", fs+10));
 		return thumb;
 	}
-	public ArrayList<String> getCast()
+	public ArrayList<CastStruct> getCast()
 	{
-		return castlist;
+		return null;
 	}
 	public String getTvShow() {return "";}
 	public String getCharSet() {return "UTF-8";}
@@ -144,10 +147,9 @@ public class OFDBPlugin implements Plugin
 		URL = bout.toString(getCharSet());
 		is.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during getSubSite: {}", getClass().getSimpleName(), e);
 		}
-//		System.out.println("getSubSite: " + URL);
+		LOGGER.trace("{MovieInfo} {}: getSubSite returns: {}", getClass().getSimpleName(), URL);
 		return URL;
 	}
 	public String lookForMovieID(BufferedReader in) {
@@ -167,24 +169,20 @@ public class OFDBPlugin implements Plugin
 			if (fs > -1) {
 				newURL = temp.substring(fs + 23, end);
 			}
-			
+
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			//System.out.println("lookForImdbID Exception: " + e);
-			// e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during lookForMovieID: {}", getClass().getSimpleName(), e);
 		}
-		//System.out.println(this.getClass().getName() + "lookForMovieID Returns " + newURL);
+		LOGGER.trace("{MovieInfo} {}: lookForMoveiID returns: {}", getClass().getSimpleName(), newURL);
 		return newURL; //To use as ###MOVIEID### in getVideoURL()
 	}
 	@Override
 	public String getAgeRating() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 	@Override
 	public String getTrailerURL() {
-		// TODO Auto-generated method stub
 		return null;
 	}
-	
+
 }

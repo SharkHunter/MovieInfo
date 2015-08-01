@@ -139,7 +139,7 @@ public class MovieDBFolder extends VirtualFolder {
 				}
 			}
 		} catch (Exception e) {
-			LOGGER.info("SQL exception: {}", e);
+			LOGGER.debug("{MovieInfo} SQL exception: {}", e);
 		} finally {
 			try {
 				if(rs!=null)
@@ -149,7 +149,7 @@ public class MovieDBFolder extends VirtualFolder {
 				if(conn!=null)
 					conn.close();
 			} catch (SQLException e) {
-				LOGGER.info("Close error: {}", e);
+				LOGGER.error("{MovieInfo} Close error: {}", e);
 			}
 		}
 	}

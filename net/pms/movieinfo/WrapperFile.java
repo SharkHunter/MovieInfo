@@ -7,7 +7,7 @@ import java.io.InputStream;
 import net.pms.dlna.RealFile;
 
 public class WrapperFile extends RealFile {
-	
+
 	private String name;
 	private String thumb;
 
@@ -15,20 +15,20 @@ public class WrapperFile extends RealFile {
 		super(file);
 		name=file.getName();
 	}
-	
+
 	public WrapperFile(File file,String name) {
 		super(file);
 		this.name=name;
 	}
-	
+
 	public void setThumb(String t) {
 		thumb=t;
 	}
-	
+
 	public String getName() {
 		return name;
 	}
-	
+
 	public InputStream getThumbnailInputStream() {
 		try {
 			return downloadAndSend(thumb,true);
@@ -41,7 +41,4 @@ public class WrapperFile extends RealFile {
 			}
 		}
 	}
-	
-	
-
 }

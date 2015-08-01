@@ -62,7 +62,7 @@ public class MovieInfoVirtualData extends VirtualFolder {
 	private String getFfmpegPath() {
 		String value = PMS.getConfiguration().getFfmpegPath();
 		if (value == null) {
-			LOGGER.trace("No ffmpeg - unable to thumbnail");
+			LOGGER.trace("{MovieInfo} No ffmpeg - unable to thumbnail");
 			throw new RuntimeException("No ffmpeg - unable to thumbnail");
 		} else {
 			return value;
@@ -101,7 +101,6 @@ public class MovieInfoVirtualData extends VirtualFolder {
 	}
 
 	public InputStream getInputStream() throws IOException {
-//		System.out.println("getInputStream");
 		File f = null;
 		if(!done ){
 		thumbnailIcon = thumbnailIcon.replaceAll("SX300_SY300_","SX1920_SY1080_");
@@ -143,7 +142,7 @@ public class MovieInfoVirtualData extends VirtualFolder {
 			if(f.exists())
 			is = new FileInputStream(new File(f.getPath()));
 		} catch (FileNotFoundException e) {
-			LOGGER.debug("File {} not found: {}", f.getPath(), e);
+			LOGGER.debug("{MovieInfo} File {} not found: {}", f.getPath(), e);
 		}
 		//InputStream is = ClassLoader.getSystemResourceAsStream(fileName);
 		return is;

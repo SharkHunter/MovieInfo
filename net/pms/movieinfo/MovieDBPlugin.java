@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.sql.ResultSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import net.pms.movieinfo.plugins.CastStruct;
 import net.pms.movieinfo.plugins.Plugin;
 
 public class MovieDBPlugin implements Plugin {
@@ -17,7 +18,7 @@ public class MovieDBPlugin implements Plugin {
 	private String tagline;
 	private String genre;
 	private String dir;
-	private ArrayList<String> castlist;
+	private ArrayList<CastStruct> castlist;
 	private int id;
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(MovieDBPlugin.class);
@@ -33,16 +34,18 @@ public class MovieDBPlugin implements Plugin {
 			id = rs.getInt("ID");
 			tagline = rs.getString("TAGLINE");
 			plot = rs.getString("PLOT");
-			castlist = new ArrayList<String>();
+			castlist = new ArrayList<CastStruct>();
 		} catch (Exception e) {
 		}
 	}
 
 	public void addCast(ResultSet rs) {
 		try {
-			castlist.add(rs.getString("THUMB"));
-			castlist.add(rs.getString("CAST"));
-			castlist.add(rs.getString("CHAR"));
+			CastStruct castEntry = new CastStruct();
+			castEntry.Actor = rs.getString("CAST");
+			castEntry.Character = rs.getString("CHAR");
+			castEntry.Picture = rs.getString("THUMB");
+			castlist.add(castEntry);
 		} catch (Exception e) {
 		}
 	}
@@ -64,7 +67,7 @@ public class MovieDBPlugin implements Plugin {
 	}
 
 	@Override
-	public ArrayList<String> getCast() {
+	public ArrayList<CastStruct> getCast() {
 		return castlist;
 	}
 

@@ -3,13 +3,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,8 +17,6 @@ public class IMDBPlugin implements Plugin
 {
 	private int fs;
 	private StringBuffer sb;
-	private ArrayList<String> castlist = new ArrayList<String>();
-	private String newURL;
 	private static final Logger LOGGER = LoggerFactory.getLogger(IMDBPlugin.class);
 
 	public void importFile(BufferedReader in)
@@ -37,6 +35,7 @@ public class IMDBPlugin implements Plugin
 		} catch (IOException e) {
 		}
 	}
+
 	public String getTitle()
 	{
 		String title = null;
@@ -54,6 +53,7 @@ public class IMDBPlugin implements Plugin
 		}
 		return title;
 	}
+
 	public String getPlot()
 	{
 		fs = sb.indexOf("Storyline</h2>");
@@ -64,6 +64,7 @@ public class IMDBPlugin implements Plugin
 		}
 		return plot;
 	}
+
 	public String getDirector()
 	{
 		Pattern re=Pattern.compile("\"description\" content=\"Directed by ([^\\.]+)\\.");
@@ -72,6 +73,7 @@ public class IMDBPlugin implements Plugin
 			return m.group(1);
 		return null;
 	}
+
 	public String getGenre()
 	{
 		Pattern re = Pattern.compile("itemprop=\"genre\">([^>]+)</span></a>");
@@ -84,6 +86,7 @@ public class IMDBPlugin implements Plugin
 		}
 		return genre;
 	}
+
 	public String getTagline()
 	{
 		fs = sb.indexOf("Taglines:</h4>");
@@ -93,6 +96,7 @@ public class IMDBPlugin implements Plugin
 		}
 		return tagline;
 	}
+
 	@Override
 	public String getAgeRating() {
 		Pattern re=Pattern.compile("itemprop=\"contentRating\" content=\"([^\"]+)\"");
@@ -101,6 +105,7 @@ public class IMDBPlugin implements Plugin
 			return m.group(1);
 		return null;
 	}
+
 	public String getRating()
 	{
 		fs = sb.indexOf("itemprop=\"ratingValue\">");
@@ -110,6 +115,7 @@ public class IMDBPlugin implements Plugin
 		}
 		return rating;
 	}
+
 	public String getVideoThumbnail()
 	{
 		fs = sb.indexOf("id=\"img_primary\"");
@@ -120,25 +126,45 @@ public class IMDBPlugin implements Plugin
 		}
 		return thumb;
 	}
-	public ArrayList<String> getCast()
+
+	public ArrayList<CastStruct> getCast()
 	{
-		Pattern re=Pattern.compile("class=\"cast_list\"(.*?)</table>",
+		ArrayList<CastStruct> castlist = new ArrayList<CastStruct>();
+
+		Pattern pattern = Pattern.compile("<table\\s+class=\"cast_list\"[^>]*(.*?)</table>",
 				Pattern.MULTILINE|Pattern.DOTALL);
-		Matcher m=re.matcher(sb.toString());
-		if(!m.find()) {
-			return castlist;
+		Matcher charListMatch = pattern.matcher(sb.toString());
+		if(!charListMatch.find()) {
+			return null;
 		}
-		Pattern re1=Pattern.compile("title=\"([^\"]+)\".*?loadlate=\"([^\"]+)\".*?/character/[^>]+>([^<]+)</a>",
+		LOGGER.trace("{MovieInfo} {}: Looking for cast in: {}", getClass().getSimpleName(), charListMatch.group(1));
+		pattern = Pattern.compile("<td\\s+class=\"primary_photo\">.*?<img(.*?title=\"([^\"]*)\".*?)/>.*?<td\\s+class=\"character\">(.*?)</td>",
 				Pattern.MULTILINE|Pattern.DOTALL);
-		Matcher m1=re1.matcher(m.group(1));
-		//LOGGER.debug("Looking for cast in: {}", m.group(1));
-		while(m1.find()) {
-			String p=m1.group(2);
-			p=p.replaceAll("SX32","SX214").replaceAll("32,44_", "214,314_");
-			p=p.replaceAll("SY44","SY314");
-			castlist.add(p);
-			castlist.add(m1.group(1));
-			castlist.add(m1.group(3));
+		Matcher characterMatch = pattern.matcher(charListMatch.group(1));
+		Matcher tempMatcher = null;
+		while(characterMatch.find()) {
+			CastStruct castEntry = new CastStruct();
+			// Actor
+			castEntry.Actor = characterMatch.group(2);
+			// Character
+			pattern = Pattern.compile("(?:\\s*<[^>]*>\\s*|\\s*&nbsp;\\s*)*([^<>/]*[^\\s<>/])");
+			tempMatcher = pattern.matcher(characterMatch.group(3));
+			if (tempMatcher.find()) {
+				castEntry.Character = tempMatcher.group(1);
+			}
+			// Actor picture
+			pattern = Pattern.compile("loadlate=\"(http://.*?/images/[^.]*\\._V\\d+_)([^_]*)(_[^,]*,\\d+,)(\\d+),(\\d+)(_[^.]*.)([^\"]*)\"");
+			tempMatcher = pattern.matcher(characterMatch.group(1));
+			if (tempMatcher.find()) {
+				castEntry.Picture =
+					tempMatcher.group(1) + // First part of link
+					"UY314" +              // Vertical size
+					tempMatcher.group(3) + // Unknown parameters
+					"0,0" +                // Pad/cut to size (0,0 = no padding/cutting, alternatively 214,314)
+					tempMatcher.group(6) + // Unknown parameter
+					tempMatcher.group(7);  // Extension
+			}
+			castlist.add(castEntry);
 		}
 		return castlist;
 	}
@@ -149,11 +175,17 @@ public class IMDBPlugin implements Plugin
 	{
 		return "imdb.com/title";
 	}
+
 	public String getVideoURL()
 	{
 		return "http://www.imdb.com/title/###MOVIEID###/";
 	}
+
 	public String lookForMovieID(BufferedReader in) {
+		if (in == null) {
+			return null;
+		}
+		String newURL = null;
 		try {
 			String inputLine, temp;
 			StringWriter content = new StringWriter();
@@ -171,7 +203,9 @@ public class IMDBPlugin implements Plugin
 			}
 
 		} catch (IOException e) {
+			LOGGER.debug("{MovieInfo} {}: Exception during lookForMovieID: {}", getClass().getSimpleName(), e);
 		}
+		LOGGER.trace("{MovieInfo} {}: lookForMoveiID returns: {}", getClass().getSimpleName(), newURL);
 		return newURL; //To use as ###MOVIEID### in getVideoURL()
 	}
 
@@ -179,11 +213,14 @@ public class IMDBPlugin implements Plugin
 		Pattern re=Pattern.compile("href=\"(/video[^\\?]+)\\?[^\"]+\"");
 		Matcher m=re.matcher(sb.toString());
 		String tmp="";
-		if(m.find()) {
+		if (m.find()) {
 			String vid = m.group(1);
-			if(!vid.endsWith("/"))
+			if(!vid.endsWith("/")) {
 				vid = vid + "/";
+			}
 			tmp="http://www.imdb.com" + vid + "player?stop=0";
+		} else {
+			return null;
 		}
 		try {
 			URL u=new URL(tmp);
@@ -199,11 +236,12 @@ public class IMDBPlugin implements Plugin
 			String rtmp=findTrailerData("file",page.toString());
 			String id=findTrailerData("id",page.toString());
 			return rtmp+" playpath="+id+" swfVfy=1 swfUrl=http://www.imdb.com/images/js/app/video/mediaplayer.swf";
+		} catch (MalformedURLException e) {
+			LOGGER.debug("{MovieInfo} {}: Malformed URL \"{}\": {}", getClass().getSimpleName(), tmp, e.getLocalizedMessage());
+		} catch (IOException e) {
+			LOGGER.debug("{MovieInfo} {}: IO error in getTrailerURL: {}", getClass().getSimpleName(), e);
 		}
-		catch (Exception e) {
-			LOGGER.debug("error "+e);
-			return null;
-		}
+		return null;
 	}
 
 	private String findTrailerData(String field,String page) {
@@ -216,9 +254,10 @@ public class IMDBPlugin implements Plugin
 
 	private String unescape(String str) {
 		try {
-			LOGGER.debug("unesc "+str);
+			LOGGER.trace("{MovieInfo} {}: Unescaped \"{}\" to \"{}\"", getClass().getSimpleName(), str, URLDecoder.decode(str,"UTF-8"));
 			return URLDecoder.decode(str,"UTF-8");
 		} catch (Exception e) {
+			LOGGER.debug("{MovieInfo} {}: Exception during unescape: {}", getClass().getSimpleName(), e);
 		}
 		return str;
 	}
