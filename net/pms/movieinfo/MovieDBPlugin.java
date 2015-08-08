@@ -3,32 +3,27 @@ package net.pms.movieinfo;
 import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.sql.ResultSet;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-
-import net.pms.movieinfo.plugins.IMDBPlugin;
+import net.pms.movieinfo.plugins.CastStruct;
 import net.pms.movieinfo.plugins.Plugin;
 
 public class MovieDBPlugin implements Plugin {
-	
+
 	private String title;
 	private String rating;
 	private String agerating;
 	private String plot;
 	private String thumb;
 	private String tagline;
-	private String pluginUrl;
-	private String priority;
 	private String genre;
 	private String dir;
-	private String metascore;
-	private ArrayList<String> castlist;
+	private ArrayList<CastStruct> castlist;
 	private int id;
-	private static final Logger logger = LoggerFactory.getLogger(MovieDBPlugin.class);
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(MovieDBPlugin.class);
 
-	
+
 	public MovieDBPlugin(ResultSet rs) {
 		try {
 			title = rs.getString("TITLE");
@@ -39,28 +34,29 @@ public class MovieDBPlugin implements Plugin {
 			id = rs.getInt("ID");
 			tagline = rs.getString("TAGLINE");
 			plot = rs.getString("PLOT");
-			metascore=rs.getString("METASCORE");
-			castlist = new ArrayList<String>();
+			castlist = new ArrayList<CastStruct>();
 		} catch (Exception e) {
 		}
 	}
-	
+
 	public void addCast(ResultSet rs) {
 		try {
-			castlist.add(rs.getString("THUMB"));
-			castlist.add(rs.getString("CAST"));
-			castlist.add(rs.getString("CHAR"));
+			CastStruct castEntry = new CastStruct();
+			castEntry.Actor = rs.getString("CAST");
+			castEntry.Character = rs.getString("CHAR");
+			castEntry.Picture = rs.getString("THUMB");
+			castlist.add(castEntry);
 		} catch (Exception e) {
 		}
 	}
-	
+
 	public void addGenre(String g) {
 		if(genre!=null)
 			genre = genre + ", " + g;
 		else
 			genre = g;
 	}
-	
+
 	public int getID() {
 		return id;
 	}
@@ -71,7 +67,7 @@ public class MovieDBPlugin implements Plugin {
 	}
 
 	@Override
-	public ArrayList<String> getCast() {
+	public ArrayList<CastStruct> getCast() {
 		return castlist;
 	}
 
@@ -136,7 +132,7 @@ public class MovieDBPlugin implements Plugin {
 	}
 
 	@Override
-	public void importFile(BufferedReader in) {		
+	public void importFile(BufferedReader in) {
 	}
 
 	@Override

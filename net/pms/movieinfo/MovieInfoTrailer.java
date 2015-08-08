@@ -1,13 +1,12 @@
 package net.pms.movieinfo;
 
-import net.pms.dlna.Range;
 import net.pms.dlna.WebVideoStream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
 
 public class MovieInfoTrailer extends WebVideoStream {
-	private static final Logger logger = LoggerFactory.getLogger(MovieInfoTrailer.class);
-	
+	//private static final Logger LOGGER = LoggerFactory.getLogger(MovieInfoTrailer.class);
+
 	public MovieInfoTrailer(String name, String thumbnailIcon, String url) {
 		super(name,url,thumbnailIcon);
 	}
@@ -40,7 +39,7 @@ public class MovieInfoTrailer extends WebVideoStream {
 					while (st.hasMoreTokens()) {
 						String elt = st.nextToken();
 						if (elt.startsWith(" \"video_id\""))
-						{	
+						{
 							newURL += "&video_id%3D";
 							newURL += elt.substring(14, elt.length()-1);
 							if (hd>-1)newURL += "&fmt=22";
@@ -50,13 +49,13 @@ public class MovieInfoTrailer extends WebVideoStream {
 						{
 							newURL += "&l=";
 							newURL += elt.substring(6, elt.length());
-							
+
 						}
 						else if (elt.startsWith(" \"sk\""))
 						{
 							newURL += "&sk=";
 							newURL += elt.substring(8, elt.length()-1);
-							
+
 						}
 						else if (elt.startsWith(" \"t\""))
 						{
@@ -73,7 +72,7 @@ public class MovieInfoTrailer extends WebVideoStream {
 		}
 		return super.getInputStream(range, mediarenderer);
 	}
-	
+
 	public boolean isTranscodeFolderAvailable() {
 		return false;
 	}

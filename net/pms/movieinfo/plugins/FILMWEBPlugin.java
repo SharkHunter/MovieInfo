@@ -8,6 +8,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.zip.GZIPInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class FILMWEBPlugin implements Plugin
@@ -15,7 +17,7 @@ public class FILMWEBPlugin implements Plugin
 	private int fs;
 	private StringBuffer sb;
 	private String newURL;
-	private ArrayList<String> castlist = new ArrayList<String>();
+	private static final Logger LOGGER = LoggerFactory.getLogger(FILMWEBPlugin.class);
 
 	public void importFile(BufferedReader in)
 	{
@@ -31,11 +33,10 @@ public class FILMWEBPlugin implements Plugin
 				eachLine = br.readLine();
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during importFile: {}", getClass().getSimpleName(), e);
 		}
 	}
-	public String getTitle() 
+	public String getTitle()
 	{
 		if(sb != null)
 		fs = sb.indexOf("<title>");
@@ -43,34 +44,39 @@ public class FILMWEBPlugin implements Plugin
 		if (fs > -1) {
 			title = sb.substring(fs + 7, sb.indexOf("</title>", fs));
 			title = title.replace(" - FILMWEB.pl", "");
-			if (title.contains("Nie znaleziono strony")||title.contains("film�w!"))
+			if (title.contains("Nie znaleziono strony") || title.contains("film�w!")) {
 				title = null;
+			}
+			LOGGER.trace("{MovieInfo} {}: Parsed title: {}", getClass().getSimpleName(), title);
 		}
 		return title;
 	}
-//	public String getPlot()
-//	{
-//		fs = sb.indexOf("o-filmie-header");
-//		if (fs > -1)
-//		fs = sb.indexOf("<p>",fs);
-//		int end = sb.indexOf("</p>",fs);
-//		if(end > sb.indexOf("... <a", fs + 3) && sb.indexOf("... <a", fs + 3) > -1)
-//			end = sb.indexOf("... <a", fs + 3);
-//		String plot = null;
-//		if (fs > -1 && end > -1) {
-//			
-//			plot = sb.substring(fs + 3, end);
-//			plot = plot.trim();
-//		}
-//		System.out.println(getSubSite("http://www.filmweb.pl/f295316/Underworld+Bunt+Lykan�w,2009/opisy"));
-//		return plot;
-//	}
+
+	/*public String getPlot()
+	{
+		fs = sb.indexOf("o-filmie-header");
+		if (fs > -1)
+		fs = sb.indexOf("<p>",fs);
+		int end = sb.indexOf("</p>",fs);
+		if(end > sb.indexOf("... <a", fs + 3) && sb.indexOf("... <a", fs + 3) > -1)
+			end = sb.indexOf("... <a", fs + 3);
+		String plot = null;
+		if (fs > -1 && end > -1) {
+
+			plot = sb.substring(fs + 3, end);
+			plot = plot.trim();
+			LOGGER.trace("{MovieInfo} {}: Parsed plot: {}", getClass().getSimpleName(), plot);
+		}
+		System.out.println(getSubSite("http://www.filmweb.pl/f295316/Underworld+Bunt+Lykan�w,2009/opisy"));
+		return plot;
+	}*/
 	public String getPlot()
 	{
 		String plot = null;
 		fs = sb.indexOf("- opisy - FILMWEB.pl\" href=\"");
-		if (fs > -1)
+		if (fs > -1) {
 			plot = sb.substring(fs + 28, sb.indexOf("\"", fs + 28));
+		}
 		if (plot != null) {
 			String sc = getSubSite(plot);
 			fs = sc.indexOf("text-align:justify\">");
@@ -82,16 +88,14 @@ public class FILMWEBPlugin implements Plugin
 				plot = plot.replace("</a>", "");
 				plot = plot.replace("<br/>", "");
 				if(plot.startsWith("http"))plot=null;
+				LOGGER.trace("{MovieInfo} {}: Parsed plot: {}", getClass().getSimpleName(), plot);
 			}
-			
 		}
-		
-//		 System.out.println("plot: " + plot);
 		return plot;
 	}
 	public String getDirector()
 	{
-		
+
 		return null;
 	}
 	public String getGenre()
@@ -121,13 +125,13 @@ public class FILMWEBPlugin implements Plugin
 		fs = sb.indexOf("class=\"film-poster");
 		if (fs >- 1)
 			fs = sb.indexOf("<img src=\"",fs);
-		if (fs > -1) 
+		if (fs > -1)
 			thumb = sb.substring(fs+10, sb.indexOf("\"", fs+10));
 		return thumb;
 	}
-	public ArrayList<String> getCast()
+	public ArrayList<CastStruct> getCast()
 	{
-		return castlist;
+		return null;
 	}
 	public String getTvShow() {return "serial";}
 	public String getCharSet() {return "UTF-8";}
@@ -172,10 +176,9 @@ public class FILMWEBPlugin implements Plugin
 		URL = bout.toString(getCharSet());
 		is.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during getSubSite: {}", getClass().getSimpleName(), e);
 		}
-//		System.out.println("getSubSite: " + URL);
+		LOGGER.trace("{MovieInfo} {}: getSubSite returns: {}", getClass().getSimpleName(), URL);
 		return URL;
 	}
 
@@ -199,26 +202,22 @@ public class FILMWEBPlugin implements Plugin
 					if(fs > -1)	newURL = temp.substring(fs+28,temp.indexOf("\"",fs+28));
 					else {newURL = null;break;}
 				}
-				
+
 			}
-			
-		} catch (IOException e) { 	
-			// TODO Auto-generated catch block
-			//System.out.println("lookForImdbID Exception: " + e);
-			// e.printStackTrace();
+
+		} catch (IOException e) {
+			LOGGER.debug("{MovieInfo} {}: Exception during lookForMovieID: {}", getClass().getSimpleName(), e);
 		}
-//		System.out.println(this.getClass().getSimpleName() + "lookForMovieID Returns " + newURL);
+		LOGGER.trace("{MovieInfo} {}: lookForMoveiID returns: {}", getClass().getSimpleName(), newURL);
 		return newURL; //To use as ###MOVIEID### in getVideoURL()
 	}
 	@Override
 	public String getAgeRating() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 	@Override
 	public String getTrailerURL() {
-		// TODO Auto-generated method stub
 		return null;
 	}
-	
+
 }

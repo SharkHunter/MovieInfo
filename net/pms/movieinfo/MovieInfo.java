@@ -4,31 +4,26 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JOptionPane;
-
-import net.pms.dlna.DLNAMediaDatabase;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import net.pms.dlna.DLNAResource;
 import net.pms.dlna.RealFile;
 import net.pms.external.AdditionalFolderAtRoot;
 import net.pms.external.AdditionalResourceFolderListener;
-import net.pms.newgui.LooksFrame;
-
 import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import javax.swing.JTextField;
-
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import org.apache.commons.lang.StringUtils;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.pms.Messages;
 import net.pms.PMS;
-
-
 import com.jgoodies.forms.builder.PanelBuilder;
 import com.jgoodies.forms.factories.Borders;
 import com.jgoodies.forms.layout.CellConstraints;
@@ -49,31 +44,27 @@ import com.jgoodies.forms.layout.FormLayout;
 */
 public class MovieInfo implements AdditionalFolderAtRoot,
 								  AdditionalResourceFolderListener {
-	private String Plugins="IMDB,FILMWEB,CSFD,MOVIEMETER,ALLOCINE,MYMOVIES,OFDB,FILMDELTA,SENSACINE,ONFILM,KINOPOISK";
-	private String NumberOfActors="99";
-	private String DisplayInfo="title,rating,tagline,genre,plot,cast,director";
-	private String Linelength="60";
-	private String Filter="filter";
-	private MovieInfoCfg cfg;
-	
+	private MovieInfoConfiguration configuration;
+	private static final Logger LOGGER = LoggerFactory.getLogger(MovieInfo.class);
+
 	public void addAdditionalFolder(DLNAResource currentResource, DLNAResource child) {
 		if(child instanceof RealFile) {
-			RealFile rf=(RealFile)child;
-			String imdb=extractImdb(rf);
+			RealFile realFile=(RealFile) child;
+			String imdb=extractImdb(realFile);
 			/*if(currentResource instanceof MovieInfoVirtualFolder)
 			return;*/
 			ResourceExtension ext = new ResourceExtension(currentResource,imdb);
 			ext.addChild(child);
 		}
 	}
-	
+
 	public static String extractImdb(DLNAResource res) {
-		if(res instanceof RealFile) 
+		if(res instanceof RealFile)
 			return extractImdb((RealFile)res);
 		else
 			return null;
 	}
-	
+
 	public static String extractImdb(RealFile file) {
 		String fName=file.getFile().getAbsolutePath();
 		Pattern re=Pattern.compile("_imdb([^_]+)_");
@@ -86,23 +77,23 @@ public class MovieInfo implements AdditionalFolderAtRoot,
 		}
 		return ret;
 	}
-	
+
 	@Override
 	public void shutdown() {
-		
+
 	}
-	
+
 	@Override
 	public String name() {
 		return "Movie Info plugin";
 	}
-	
-	private JTextField PluginsField;
-	private JTextField NumberOfActorsField;
-	private JCheckBox CoverField;
-	private JTextField DisplayInfoField;
-	private JTextField LinelengthField;
-	private JTextField FilterField;
+
+	private JTextField pluginsField;
+	private JSpinner maxNumberOfActorsField;
+	private JCheckBox downloadCoverField;
+	private JTextField displayInfoField;
+	private JSpinner plotLineLengthField;
+	private JTextField filterField;
 	private JTextField ScanPath;
 
 	@Override
@@ -110,151 +101,100 @@ public class MovieInfo implements AdditionalFolderAtRoot,
 		FormLayout layout = new FormLayout("left:pref, 2dlu, p,2dlu, p,2dlu, p, 2dlu, p, 2dlu, p,2dlu, p,200dlu, pref:grow", //$NON-NLS-1$
 				"p, 5dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p,0:grow"); //$NON-NLS-1$
 		PanelBuilder builder = new PanelBuilder(layout);
-		builder.setBorder(Borders.EMPTY_BORDER);
-		builder.setOpaque(false);
+		builder.border(Borders.EMPTY);
+		builder.opaque(false);
 
 		CellConstraints cc = new CellConstraints();
-		
+
 		JComponent cmp = builder.addSeparator("MOVIE INFO CONFIG",  cc.xy(1, 1));
 	      cmp = (JComponent) cmp.getComponent(0);
 	      cmp.setFont(cmp.getFont().deriveFont(Font.BOLD));
 
-	    PluginsField = new JTextField();
-		if (Plugins != null)
-			PluginsField.setText(Plugins);
-		PluginsField.addKeyListener(new KeyListener() {
+	    pluginsField = new JTextField();
+	    pluginsField.setEnabled(false); // Until MovieInfoConfiguration.save() is implemented
+		if (configuration.getPlugins() != null)
+			pluginsField.setText(configuration.getPlugins());
+		pluginsField.addActionListener(new ActionListener() {
 
 			@Override
-			public void keyPressed(KeyEvent e) {
+			public void actionPerformed(ActionEvent e) {
+				configuration.setPlugins(pluginsField.getText());
 			}
-
-			@Override
-			public void keyTyped(KeyEvent e) {
-			}
-
-			@Override
-			public void keyReleased(KeyEvent e) {
-				PMS.getConfiguration().setCustomProperty("cmd",
-						PluginsField.getText());
-			}
-
 		});
-		builder.addLabel("Plugins:", cc.xy(1, 3));
-		builder.add(PluginsField, cc.xyw(3,3,12));
+		builder.addLabel("Plugins to use (in prioritized order):", cc.xy(1, 3));
+		builder.add(pluginsField, cc.xyw(3,3,12));
 
-		NumberOfActorsField = new JTextField();
-		if (NumberOfActors != null)
-			NumberOfActorsField.setText(NumberOfActors);
-		NumberOfActorsField.addKeyListener(new KeyListener() {
-
-			@Override
-			public void keyPressed(KeyEvent e) {
-			}
+		maxNumberOfActorsField = new JSpinner(new SpinnerNumberModel());
+	    maxNumberOfActorsField.setEnabled(false); // Until MovieInfoConfiguration.save() is implemented
+		maxNumberOfActorsField.setValue(configuration.getMaxNumberOfActors());
+		maxNumberOfActorsField.addChangeListener(new ChangeListener() {
 
 			@Override
-			public void keyTyped(KeyEvent e) {
+			public void stateChanged(ChangeEvent e) {
+				configuration.setMaxNumberOfActors((Integer) maxNumberOfActorsField.getValue());
 			}
-
-			@Override
-			public void keyReleased(KeyEvent e) {
-				PMS.getConfiguration().setCustomProperty(
-						"cmd", NumberOfActorsField.getText());
-			}
-
 		});
-		builder.addLabel("NumberOfActors:", cc.xy(1, 5));
-		builder.add(NumberOfActorsField, cc.xy(3, 5));
-		
-		CoverField = new JCheckBox();
-		CoverField.addKeyListener(new KeyListener() {
-			
+		builder.addLabel("Maximum number of actors to display:", cc.xy(1, 5));
+		builder.add(maxNumberOfActorsField, cc.xy(3, 5));
+
+		downloadCoverField = new JCheckBox();
+	    downloadCoverField.setEnabled(false); // Until MovieInfoConfiguration.save() is implemented
+		downloadCoverField.setSelected(configuration.getDownloadCover());
+		downloadCoverField.addChangeListener(new ChangeListener() {
+
 			@Override
-			public void keyPressed(KeyEvent e) {
+			public void stateChanged(ChangeEvent e) {
+				configuration.setDownloadCover(downloadCoverField.isSelected());
 			}
-			
-			@Override
-			public void keyTyped(KeyEvent e) {
-			}
-			
-			@Override
-			public void keyReleased(KeyEvent e) {
-				PMS.getConfiguration().setCustomProperty(
-						"cmd", CoverField.getText());
-			}
-			
 		});
-		builder.addLabel("Download Cover To Folder:", cc.xy(5, 5));
-		builder.add(CoverField, cc.xy(7, 5));
-		
-		DisplayInfoField = new JTextField();
-		if (DisplayInfo != null)
-			DisplayInfoField.setText(DisplayInfo);
-		DisplayInfoField.addKeyListener(new KeyListener() {
-			
+		builder.addLabel("Download cover to movie folder:", cc.xy(5, 5));
+		builder.add(downloadCoverField, cc.xy(7, 5));
+
+		displayInfoField = new JTextField();
+	    displayInfoField.setEnabled(false); // Until MovieInfoConfiguration.save() is implemented
+		if (configuration.getDisplayInfo() != null) {
+			displayInfoField.setText(configuration.getDisplayInfoAsString());
+		}
+		displayInfoField.addActionListener(new ActionListener() {
+
 			@Override
-			public void keyPressed(KeyEvent e) {
+			public void actionPerformed(ActionEvent e) {
+				//TODO: Needs verification logics
+				configuration.setDisplayInfoFromString(displayInfoField.getText());
 			}
-			
-			@Override
-			public void keyTyped(KeyEvent e) {
-			}
-			
-			@Override
-			public void keyReleased(KeyEvent e) {
-				PMS.getConfiguration().setCustomProperty("cmd",
-						DisplayInfoField.getText());
-			}
-			
 		});
 		builder.addLabel("DisplayInfo:", cc.xy(13, 5));
-		builder.add(DisplayInfoField, cc.xyw(14, 5,2));
-		
-		LinelengthField = new JTextField();
-		if (Linelength != null)
-			LinelengthField.setText(Linelength);
-		LinelengthField.addKeyListener(new KeyListener() {
-			
+		builder.add(displayInfoField, cc.xyw(14, 5,2));
+
+		plotLineLengthField = new JSpinner(new SpinnerNumberModel());
+	    plotLineLengthField.setEnabled(false); // Until MovieInfoConfiguration.save() is implemented
+		plotLineLengthField.setValue(configuration.getPlotLineLength());
+		plotLineLengthField.addChangeListener(new ChangeListener() {
+
 			@Override
-			public void keyPressed(KeyEvent e) {
+			public void stateChanged(ChangeEvent e) {
+				configuration.setPlotLineLength((Integer) plotLineLengthField.getValue());
 			}
-			
-			@Override
-			public void keyTyped(KeyEvent e) {
-			}
-			
-			@Override
-			public void keyReleased(KeyEvent e) {
-				PMS.getConfiguration().setCustomProperty(
-						"cmd", LinelengthField.getText());
-			}
-			
 		});
-		builder.addLabel("Linelength:", cc.xy(9, 5));
-		builder.add(LinelengthField, cc.xy(11, 5));
-		
-		FilterField = new JTextField();
-		if (Filter != null)
-			FilterField.setText(Filter);
-		FilterField.addKeyListener(new KeyListener() {
-			
+		builder.addLabel("Plot line length:", cc.xy(9, 5));
+		builder.add(plotLineLengthField, cc.xy(11, 5));
+
+		filterField = new JTextField();
+	    filterField.setEnabled(false); // Until MovieInfoConfiguration.save() is implemented
+		if (configuration.getFilters() != null) {
+			filterField.setText(configuration.getFiltersAsString());
+		}
+		filterField.addActionListener(new ActionListener() {
+
 			@Override
-			public void keyPressed(KeyEvent e) {
+			public void actionPerformed(ActionEvent e) {
+				//TODO: Needs verification logics
+				configuration.setFiltersFromString(filterField.getText());
 			}
-			
-			@Override
-			public void keyTyped(KeyEvent e) {
-			}
-			
-			@Override
-			public void keyReleased(KeyEvent e) {
-				PMS.getConfiguration().setCustomProperty(
-						"cmd", FilterField.getText());
-			}
-			
 		});
 		ScanPath=new JTextField();
 		builder.addLabel("Filter:", cc.xy(1, 7));
-		builder.add(FilterField, cc.xyw(3, 7,12));
+		builder.add(filterField, cc.xyw(3, 7,12));
 		builder.addLabel("Scan path:", cc.xy(1, 9));
 		builder.add(ScanPath, cc.xyw(3, 9,12));
 		ScanPath.setText((String)PMS.getConfiguration().getCustomProperty("movieinfo.scan_path"));
@@ -289,24 +229,24 @@ public class MovieInfo implements AdditionalFolderAtRoot,
 
 		return builder.getPanel();
 	}
-	
+
 	private MovieDB mdb;
 	private static MovieInfo inst;
-	
+
 	public MovieInfo() {
 		inst = this;
-		PMS.info("Starting MovieInfo");
+		LOGGER.info("{MovieInfo} Starting MovieInfo plugin");
 		mdb=null;
-		cfg=new MovieInfoCfg();
+		configuration=new MovieInfoConfiguration();
 		if(movieDB()){
 			mdb=new MovieDB();
 		}
 	}
-	
-	public static MovieInfoCfg cfg() {
-		return inst.cfg;
+
+	public static MovieInfoConfiguration configuration() {
+		return inst.configuration;
 	}
-	
+
 	public static boolean movieDB() {
 		String s=(String)PMS.getConfiguration().getCustomProperty("movieinfo.movieDB");
 		if(StringUtils.isNotEmpty(s))
@@ -318,7 +258,7 @@ public class MovieInfo implements AdditionalFolderAtRoot,
 	public DLNAResource getChild() {
 		return mdb;
 	}
-	
+
 	public static MovieDB getDB() {
 		return inst.mdb;
 	}

@@ -3,13 +3,16 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SENSACINEPlugin implements Plugin
 {
 	private int fs;
 	private StringBuffer sb;
 	private String newURL;
-	private ArrayList<String> castlist = new ArrayList<String>();
+	private static final Logger LOGGER = LoggerFactory.getLogger(SENSACINEPlugin.class);
+
 
 	public void importFile(BufferedReader in)
 	{
@@ -25,11 +28,10 @@ public class SENSACINEPlugin implements Plugin
 				eachLine = br.readLine();
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during importFile: {}", getClass().getSimpleName(), e);
 		}
 	}
-	public String getTitle() 
+	public String getTitle()
 	{
 		if(sb != null)
 		fs = sb.indexOf("<title>");
@@ -37,6 +39,7 @@ public class SENSACINEPlugin implements Plugin
 		if (fs > -1) {
 			title = sb.substring(fs + 7, sb.indexOf("</title>", fs)-1);
 			title = title.replace(" - Sensacine.co", "");
+			LOGGER.trace("{MovieInfo} {}: Parsed title: {}", getClass().getSimpleName(), title);
 			}
 		return title;
 	}
@@ -49,13 +52,13 @@ public class SENSACINEPlugin implements Plugin
 		if (fs > -1) {
 			plot = sb.substring(fs + 25,sb.indexOf("</",fs+25));
 			plot = plot.trim();
-//			System.out.println(this.getClass().getSimpleName() + " " + plot);
+			LOGGER.trace("{MovieInfo} {}: Parsed plot: {}", getClass().getSimpleName(), plot);
 		}
 		return plot;
 	}
 	public String getDirector()
 	{
-		
+
 		return null;
 	}
 	public String getGenre()
@@ -76,13 +79,13 @@ public class SENSACINEPlugin implements Plugin
 	{
 		String thumb = null;
 		fs = sb.indexOf("<td valign=\"top\" width=\"120\"><img src=\"");
-		if (fs > -1) 
+		if (fs > -1)
 			thumb = sb.substring(fs+39, sb.indexOf("\"", fs+39));
 		return thumb;
 	}
-	public ArrayList<String> getCast()
+	public ArrayList<CastStruct> getCast()
 	{
-		return castlist;
+		return null;
 	}
 	public String getTvShow() {return "";}
 	public String getCharSet() {return "8859_1";}
@@ -111,24 +114,20 @@ public class SENSACINEPlugin implements Plugin
 			if (fs > -1) {
 				newURL = temp.substring(fs + 29, end);
 			}
-			
+
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			//System.out.println("lookForImdbID Exception: " + e);
-			// e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during lookForMovieID: {}", getClass().getSimpleName(), e);
 		}
-		//System.out.println(this.getClass().getName() + "lookForMovieID Returns " + newURL);
+		LOGGER.trace("{MovieInfo} {}: lookForMoveiID returns: {}", getClass().getSimpleName(), newURL);
 		return newURL; //To use as ###MOVIEID### in getVideoURL()
 	}
 	@Override
 	public String getAgeRating() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 	@Override
 	public String getTrailerURL() {
-		// TODO Auto-generated method stub
 		return null;
 	}
-	
+
 }

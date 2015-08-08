@@ -3,13 +3,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CSFDPlugin implements Plugin
 {
 	private int fs=-1;
 	private StringBuffer sb;
 	private String newURL;
-	private ArrayList<String> castlist = new ArrayList<String>();
+	private static final Logger LOGGER = LoggerFactory.getLogger(CSFDPlugin.class);
 
 	public void importFile(BufferedReader in)
 	{
@@ -25,11 +27,10 @@ public class CSFDPlugin implements Plugin
 				eachLine = br.readLine();
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during importFile: {}", getClass().getSimpleName(), e);
 		}
 	}
-	public String getTitle() 
+	public String getTitle()
 	{
 		String title = null;
 		if(sb != null) {
@@ -37,9 +38,9 @@ public class CSFDPlugin implements Plugin
 			if (fs > -1) {
 				title = sb.substring(fs + 7, sb.indexOf("</title>", fs));
 				title = title.replace(" | ČSFD.cz", "");
+				if (title.contains("404 Not Found")) title = null;
+				LOGGER.trace("{MovieInfo} {}: Parsed title: {}", getClass().getSimpleName(), title);
 			}
-			if (title != null)
-				if (title.contains("404 Not Found")) title=null;
 		}
 		return title;
 	}
@@ -49,8 +50,8 @@ public class CSFDPlugin implements Plugin
 		String plot = null;
 		if (fs > -1) {
 			plot = sb.substring(sb.indexOf(">",fs)+1, sb.indexOf("<span class=\"source", fs + 13));
-			
 			plot = plot.trim();
+			LOGGER.trace("{MovieInfo} {}: Parsed plot: {}", getClass().getSimpleName(), plot);
 		}
 		return plot;
 	}
@@ -112,12 +113,13 @@ public class CSFDPlugin implements Plugin
 		fs = sb.indexOf("<meta property=\"og:image\" content=\"");
 		String thumb = null;
 		if (fs >-1){
-		thumb = sb.substring(fs + 35, sb.indexOf("\"",fs + 35));	
+		thumb = sb.substring(fs + 35, sb.indexOf("\"",fs + 35));
 		}
 		return thumb;
 	}
-	public ArrayList<String> getCast()
+	public ArrayList<CastStruct> getCast()
 	{
+		ArrayList<CastStruct> castlist = new ArrayList<CastStruct>();
 
 		fs = sb.indexOf("<h4>Hrají:</h4>");
 		if (fs > -1) {
@@ -125,10 +127,10 @@ public class CSFDPlugin implements Plugin
 			int enditem = fs;
 			int end = sb.indexOf("</a>	", fs);
 			while (enditem != end) {
+				CastStruct castEntry = new CastStruct();
 				enditem = sb.indexOf("</a>", fs);
-				castlist.add("");
-				castlist.add(sb.substring(fs, enditem));
-				castlist.add("");
+				castEntry.Actor = sb.substring(fs, enditem);
+				castlist.add(castEntry);
 				if (enditem != end) {
 					fs = sb.indexOf(">", enditem + 4) + 1;
 				}
@@ -167,25 +169,21 @@ public class CSFDPlugin implements Plugin
 				fs = newURL.indexOf("?");
 				if (fs > -1)
 					newURL = newURL.substring(0,fs);
-			}			
-			
+			}
+
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			//System.out.println("lookForImdbID Exception: " + e);
-			// e.printStackTrace();
+			LOGGER.debug("{MovieInfo} {}: Exception during lookForMovieID: {}", getClass().getSimpleName(), e);
 		}
-		//System.out.println(this.getClass().getName() + "lookForMovieID Returns " + newURL);
+		LOGGER.trace("{MovieInfo} {}: lookForMoveiID returns: {}", getClass().getSimpleName(), newURL);
 		return newURL; //To use as ###MOVIEID### in getVideoURL()
 	}
 	@Override
 	public String getAgeRating() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 	@Override
 	public String getTrailerURL() {
-		// TODO Auto-generated method stub
 		return null;
 	}
-	
+
 }

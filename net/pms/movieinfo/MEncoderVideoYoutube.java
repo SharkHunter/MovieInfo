@@ -19,9 +19,7 @@
 package net.pms.movieinfo;
 
 import java.io.IOException;
-
 import javax.swing.JComponent;
-
 import net.pms.configuration.PmsConfiguration;
 import net.pms.dlna.DLNAMediaInfo;
 import net.pms.dlna.DLNAResource;
@@ -38,14 +36,14 @@ public class MEncoderVideoYoutube extends Player {
 	public JComponent config() {
 		return null;
 	}
-	
+
 	public static final String ID = "mencoderwebyoutube"; //$NON-NLS-1$
-	
+
 	@Override
 	public String id() {
 		return ID;
 	}
-	
+
 	@Override
 	public int purpose() {
 		return VIDEO_WEBSTREAM_PLAYER;
@@ -65,22 +63,24 @@ public class MEncoderVideoYoutube extends Player {
 		return new String [] { "-prefer-ipv4", "-nocache", "-quiet", "-oac", "lavc", "-of", "lavf", "-lavfopts", "format=dvd", "-ovc", "lavc", "-lavcopts", "vcodec=mpeg2video:vbitrate=4096:threads=2:acodec=ac3:abitrate=128", "-ofps", "24000/1001","-noskip"
 				}; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$ //$NON-NLS-8$ //$NON-NLS-9$ //$NON-NLS-10$ //$NON-NLS-11$ //$NON-NLS-12$ //$NON-NLS-13$ //$NON-NLS-14$
 	}
-	
+
 	private final PmsConfiguration configuration;
-	
+
 	public MEncoderVideoYoutube(PmsConfiguration configuration) {
 		this.configuration = configuration;
 	}
 
-	public ProcessWrapper launchTranscode(String fileName, DLNAMediaInfo media,
-			OutputParams params) throws IOException {
+	@Override
+	public ProcessWrapper launchTranscode(DLNAResource dlna,
+			DLNAMediaInfo media, OutputParams params) throws IOException {
 		params.minBufferSize = params.minFileSize;
 		params.secondread_minsize = 100000;
+		final String fileName = dlna.getSystemName();
 		//return super.launchTranscode(fileName, media, params);
-		
+
 		PipeProcess pipe = new PipeProcess("mencoder" + System.currentTimeMillis()); //$NON-NLS-1$
 		params.input_pipes [0] = pipe;
-		
+
 		String cmdArray [] = new String [args().length + 4];
 		cmdArray[0] = executable();
 		cmdArray[1] = fileName;
@@ -89,9 +89,9 @@ public class MEncoderVideoYoutube extends Player {
 		}
 		cmdArray[cmdArray.length-2] = "-o"; //$NON-NLS-1$
 		cmdArray[cmdArray.length-1] = pipe.getInputPipe();
-		
+
 		ProcessWrapper mkfifo_process = pipe.getPipeProcess();
-		
+
 		ProcessWrapperImpl pw = new ProcessWrapperImpl(cmdArray, params);
 		pw.attachProcess(mkfifo_process);
 		mkfifo_process.runInNewThread();
@@ -99,7 +99,7 @@ public class MEncoderVideoYoutube extends Player {
 			Thread.sleep(50);
 		} catch (InterruptedException e) { }
 		pipe.deleteLater();
-		
+
 		pw.runInNewThread();
 		try {
 			Thread.sleep(50);
@@ -111,7 +111,7 @@ public class MEncoderVideoYoutube extends Player {
 	public boolean avisynth() {
 		return false;
 	}
-	
+
 	@Override
 	public String name() {
 		return "MEncoder Youtube"; //$NON-NLS-1$
@@ -133,14 +133,7 @@ public class MEncoderVideoYoutube extends Player {
 	}
 
 	@Override
-	public ProcessWrapper launchTranscode(String arg0, DLNAResource arg1,
-			DLNAMediaInfo arg2, OutputParams arg3) throws IOException {
-		return launchTranscode(arg0,arg2,arg3);
-	}
-
-	@Override
 	public boolean isCompatible(DLNAResource arg0) {
 		return false;
 	}
-
 }
