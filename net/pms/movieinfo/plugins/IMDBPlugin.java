@@ -147,7 +147,7 @@ public class IMDBPlugin implements Plugin
 			// Actor
 			castEntry.Actor = characterMatch.group(2);
 			// Character
-			pattern = Pattern.compile("(?:\\s*<[^>]*>\\s*|\\s*&nbsp;\\s*)*([^<>/]*[^\\s<>/])");
+			pattern = Pattern.compile("(?:\\s*<[^>]*>\\s*|\\s*&nbsp;\\s*)*((?:(?! - )[^<>/\\(])*[^\\s<>/\\(])");
 			tempMatcher = pattern.matcher(characterMatch.group(3));
 			if (tempMatcher.find()) {
 				castEntry.Character = tempMatcher.group(1);

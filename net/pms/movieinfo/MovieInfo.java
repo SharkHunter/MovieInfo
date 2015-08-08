@@ -49,8 +49,8 @@ public class MovieInfo implements AdditionalFolderAtRoot,
 
 	public void addAdditionalFolder(DLNAResource currentResource, DLNAResource child) {
 		if(child instanceof RealFile) {
-			RealFile rf=(RealFile)child;
-			String imdb=extractImdb(rf);
+			RealFile realFile=(RealFile) child;
+			String imdb=extractImdb(realFile);
 			/*if(currentResource instanceof MovieInfoVirtualFolder)
 			return;*/
 			ResourceExtension ext = new ResourceExtension(currentResource,imdb);

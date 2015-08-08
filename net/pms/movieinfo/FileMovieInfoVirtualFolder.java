@@ -34,9 +34,7 @@ import org.slf4j.LoggerFactory;
 
 public class FileMovieInfoVirtualFolder extends VirtualFolder {
 
-	private final boolean GOOGLE = true;
 	private final boolean MOVIEWEBSITE = false;
-	private String newURL;
 	private String title = null;
 	private String rating;
 	private String agerating;
@@ -45,7 +43,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	private String tagline;
 	private String pluginUrl;
 	private String genre;
-	private String dir;
+	private String director;
 	private boolean resolved;
 	private boolean isDVD = false;
 	private ArrayList<CastStruct> castlist = new ArrayList<CastStruct>();
@@ -53,12 +51,12 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	private int plotLineLength;
 	private String className = null;
 	private String pluginTv;
-	private String pluginChar;
+	private String pluginCharset;
 	private String nfoId;
 	private String trailer;
 	private DLNAResource origRes;
 	private String hash;
-	private Plugin plug;
+	private Plugin plugin;
 	private String thumbfolder = "";
 	protected MovieInfoConfiguration config = MovieInfo.configuration();
 	private static final Logger LOGGER = LoggerFactory.getLogger(FileMovieInfoVirtualFolder.class);
@@ -69,29 +67,29 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 
 	@Override
 	public void resolve() {
-		super.resolve();
-		getConfig();
-		if(plug!=null)
-			transferData(plug);
-		} else {
-			gather();
-		}
-		MovieInfoVirtualFolder fld = null;
-		display(fld);
+		if (!resolved) {
+			if (plugin != null) {
+				transferData(plugin);
+			} else {
+				gather();
+			}
+			display();
 		resolved = true;
+		}
 	}
 
 	public void setPlugin(Plugin p) {
-		plug = p;
+		plugin = p;
 	}
 
 	public void gather() {
-		if(nfoId ==  null)
+		final boolean GOOGLE = true;
+		if(nfoId == null)
 			nfoId=MovieInfo.extractImdb(origRes);
 
 		if (!resolved && getChildren().size() == 0) {
-			String name=getName();
-			if(getParent()!=null) {
+			String name = getName();
+			if (getParent() != null) {
 				if (getParent().getParent().getParent().getName().contains("[DVD ISO]"))
 					isDVD = true;
 				name = getParent().getName();
@@ -120,7 +118,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 			}
 			pluginTv = plugin.getTvShow();
 			pluginUrl = plugin.getGoogleSearchSite();
-			pluginChar = plugin.getCharSet();
+			pluginCharset = plugin.getCharSet();
 
 			String nfo = nfoId;
 			if(nfo.length() == 0)
@@ -161,11 +159,11 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 			}
 			if (nfo != null) {
 				transferData(plugin);
+				MovieDB.add(origRes, nfoId,
+						genre, title, rating,
+						director,agerating,castlist,
+						thumb,hash,plot,tagline);
 			}
-			MovieDB.add(origRes, nfoId,
-					genre, title, rating,
-					dir,agerating,castlist,
-					thumb,hash,plot,tagline);
 		}
 	}
 
@@ -176,7 +174,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 		rating = plugin.getRating();
 		genre = plugin.getGenre();
 		plot = plugin.getPlot();
-		dir = plugin.getDirector();
+		director = plugin.getDirector();
 		castlist = plugin.getCast();
 		tagline = plugin.getTagline();
 		agerating = plugin.getAgeRating();
@@ -186,47 +184,62 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 		hash=h;
 	}
 
-	private void display(MovieInfoVirtualFolder fld) {
+	private void display() {
 		for (String displayEntry : MovieInfo.configuration().getDisplayInfo()) {
 			switch (displayEntry.toLowerCase()) {
 				case "title":
-					displayTitle(fld);
+					displayTitle();
 					break;
 				case "tagline":
-					displayTagline(fld);
+					displayTagline();
 					break;
 				case "rating":
-					displayRating(fld);
+					displayRating();
 					break;
 				case "genre":
-					displayGenre(fld);
+					displayGenre();
 					break;
 				case "director":
-					displayDirector(fld);
+					displayDirector();
 					break;
 				case "cast":
-					displayCast(fld);
+					displayCast();
 					break;
 				case "plot":
-					displayPlot(fld);
+					displayPlot();
 					break;
 				case "agerating":
-					displayAgeRating(fld);
+					displayAgeRating();
 					break;
 			}
 		}
+		nullDisplayVariables();
 	}
 
-	private void displayTitle(MovieInfoVirtualFolder fld) {
+	private void nullDisplayVariables() {
+		title = null;
+		trailer = null;
+		thumbfolder = "";
+		rating = null;
+		genre = null;
+		tagline = null;
+		agerating = null;
+		director = null;
+		plot = null;
+		castlist = null;
+	}
+
+	private void displayTitle() {
 		if (title != null) {
 			title = clean(title);
+			MovieInfoVirtualFolder folder;
 			if (config.getCellWrap() == 0) {
-				fld = new MovieInfoVirtualFolder((config.getShowTags() ? "Title: " : "") + title, thumb);
+				folder = new MovieInfoVirtualFolder((config.getShowTags() ? "Title: " : "") + title, thumb);
 			} else {
-				fld = new MovieInfoVirtualFolder(wrapKerned(title.toUpperCase(), 1.2), thumb);
+				folder = new MovieInfoVirtualFolder(wrapKerned(title.toUpperCase(), 1.2), thumb);
 			}
 			if (thumb != null)
-				fld.addChild(new MovieInfoVirtualData(title, thumb.replaceAll("S[X,Y][0-9]{2,3}_S[X,Y][0-9]{2,3}_", "SX300_SY300_")));
+				folder.addChild(new MovieInfoVirtualData(title, thumb.replaceAll("S[X,Y][0-9]{2,3}_S[X,Y][0-9]{2,3}_", "SX300_SY300_")));
 			if (!isDVD && className.equals(MovieInfo.configuration().getTopPlugin())) {
 				File f = new File((StringUtils.isNotBlank(thumbfolder) ? thumbfolder : getParent().getParent().getParent().getSystemName()) + File.separator + getParent().getName() + ".cover.jpg");
 				if (MovieInfo.configuration().getDownloadCover()) {
@@ -237,7 +250,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 				if(trailer != null)
 					addChild(new WebVideoStream(title+" - Trailer",trailer,thumb));
 			}
-			addChild(fld);
+			addChild(folder);
 		}
 	}
 
@@ -277,7 +290,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 		}
 	}
 
-	private void displayRating(MovieInfoVirtualFolder fld) {
+	private void displayRating() {
 		if (rating != null && rating.matches("[0-9][\\.,\\,][0-9]*?/10.*?")) {
 			rating = clean(rating);
 			int star = Math.round(Float.parseFloat(rating.substring(0, rating.indexOf("/"))));
@@ -290,36 +303,36 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 		}
 	}
 
-	private void displayGenre(MovieInfoVirtualFolder fld) {
+	private void displayGenre() {
 		if (genre != null && genre != " ") {
 			genre = clean(genre);
 			addInfo("Genre: ", genre);
 		}
 	}
 
-	private void displayTagline(MovieInfoVirtualFolder fld) {
+	private void displayTagline() {
 		if (tagline != null) {
 			tagline = clean(tagline);
 			addInfo("Tagline: ", tagline);
 		}
 	}
 
-	private void displayAgeRating(MovieInfoVirtualFolder fld) {
+	private void displayAgeRating() {
 		if (agerating != null) {
 			agerating = clean(agerating);
 			addInfo("Age Rating: ", agerating);
 		}
 	}
 
-	private void displayDirector(MovieInfoVirtualFolder fld) {
-		if (dir != null) {
-			dir = clean(dir);
-			dir = dir.replaceAll("\\.\\s*$", "");
-			addInfo("Director: ", dir);
+	private void displayDirector() {
+		if (director != null) {
+			director = clean(director);
+			director = director.replaceAll("\\.\\s*$", "");
+			addInfo("Director: ", director);
 		}
 	}
 
-	private void displayPlot(MovieInfoVirtualFolder fld) {
+	private void displayPlot() {
 		String plotLine = "", label = config.getShowTags() ? "Plot: " : "";
 		int start = 0;
 		if (plot != null) {
@@ -348,7 +361,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 		}
 	}
 
-	private void displayCast(MovieInfoVirtualFolder fld) {
+	private void displayCast() {
 		if (castlist != null && !castlist.isEmpty()) {
 			String temp = config.getShowTags() ? "Cast: " : "";
 			int a = 0;
@@ -361,11 +374,11 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 				if (castEntry.Character != null) {
 					label += " as " + castEntry.Character;
 				}
-				fld = new MovieInfoVirtualFolder((config.getCellWrap() != 0 ? wrap(label) : label), castEntry.Picture);
+				MovieInfoVirtualFolder folder = new MovieInfoVirtualFolder((config.getCellWrap() != 0 ? wrap(label) : label), castEntry.Picture);
 				if (castEntry.Actor != null && castEntry.Picture != null) {
-					fld.addChild(new MovieInfoVirtualData(castEntry.Actor,castEntry.Picture));
+					folder.addChild(new MovieInfoVirtualData(castEntry.Actor,castEntry.Picture));
 				}
-				addChild(fld);
+				addChild(folder);
 				temp = config.getShowTags() ? "____   " : "";
 			}
 		}
@@ -400,7 +413,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	}
 
 	private String imdbIDFromNfo(String movieName) {
-
+		String newURL = null;
 		try {
 			BufferedReader in = null;
 			FileReader fr = null;
@@ -445,6 +458,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 	}
 
 	private String lookForImdbID(BufferedReader in) {
+		String newURL = null;
 		try {
 			String inputLine, temp;
 			StringWriter content = new StringWriter();
@@ -457,7 +471,6 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 			content.close();
 			temp = content.toString();
 			int fs = temp.indexOf(pluginUrl);
-			newURL = null;
 			if (fs == -1 || pluginUrl.contains("imdb.com")) {
 				fs = temp.indexOf("title/tt");
 				if (fs > -1)
@@ -599,7 +612,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 			while( (n=is.read(buffer))> -1) {
 				bout.write(buffer, 0, n);
 			}
-			in = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bout.toByteArray()), pluginChar));
+			in = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bout.toByteArray()), pluginCharset));
 		} catch (UnsupportedEncodingException e) {
 			LOGGER.debug("{MovieInfo} BufferedReader caught UnsupportedEncodingException: {}", e);
 			return null;
