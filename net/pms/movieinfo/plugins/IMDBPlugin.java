@@ -10,6 +10,7 @@ import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.pms.movieinfo.FileMovieInfoVirtualFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +61,7 @@ public class IMDBPlugin implements Plugin
 		fs=sb.indexOf("<p>",fs+14);
 		String plot = null;
 		if (fs > -1) {
-			plot = sb.substring(fs + 3, sb.indexOf("<", fs + 3));
+			plot = FileMovieInfoVirtualFolder.plainText(sb.substring(fs + 3, sb.indexOf("</p", fs + 3)));
 		}
 		return plot;
 	}

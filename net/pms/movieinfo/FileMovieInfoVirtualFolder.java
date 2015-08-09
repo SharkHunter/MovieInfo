@@ -668,7 +668,18 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 		return h;
 	}
 
-	public String clean(String s) {
+	public static String plainText(String html) {
+		return html
+			// Preserve line breaks
+			.replaceAll("<(br|p|BR|P) */?>", "\n")
+			// Remove remaining tags
+			.replaceAll("<[^>]+>", "")
+			// Collapse non-newline whitespace
+			.replaceAll("[ \t\f\r]+", " ")
+			.trim();
+	}
+
+	public static String clean(String s) {
 		if (s == null) {
 			return null;
 		}
