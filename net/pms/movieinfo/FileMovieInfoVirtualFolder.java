@@ -365,7 +365,7 @@ public class FileMovieInfoVirtualFolder extends VirtualFolder {
 		if (castlist != null && !castlist.isEmpty()) {
 			String temp = config.getShowTags() ? "Cast: " : "";
 			int a = 0;
-			while (!castlist.isEmpty() && a++ <= numberOfActors) {
+			while (!castlist.isEmpty() && a++ < numberOfActors) {
 				CastStruct castEntry = castlist.remove(0);
 				String label = (config.getCellWrap() != 0 ? "" : temp);
 				if (castEntry.Actor != null) {
