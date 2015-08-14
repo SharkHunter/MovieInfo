@@ -46,10 +46,10 @@ public class CSFDPlugin implements Plugin
 	}
 	public String getPlot()
 	{
-		fs = sb.indexOf("alt=\"Odrážka\"");
+		fs = sb.indexOf("<h3>Obsah");
 		String plot = null;
 		if (fs > -1) {
-			plot = sb.substring(sb.indexOf(">",fs)+1, sb.indexOf("<span class=\"source", fs + 13));
+			plot = sb.substring(sb.indexOf("</span>",fs)+7, sb.indexOf("<span class=\"source", fs));
 			plot = plot.trim();
 			LOGGER.trace("{MovieInfo} {}: Parsed plot: {}", getClass().getSimpleName(), plot);
 		}
@@ -110,10 +110,17 @@ public class CSFDPlugin implements Plugin
 	}
 	public String getVideoThumbnail()
 	{
-		fs = sb.indexOf("<meta property=\"og:image\" content=\"");
+		fs = sb.indexOf("<div id=\"poster\" class=\"image\">");
+		fs = sb.indexOf("<img src=\"", fs);
 		String thumb = null;
-		if (fs >-1){
-		thumb = sb.substring(fs + 35, sb.indexOf("\"",fs + 35));
+		if (fs >-1) {
+			thumb = sb.substring(fs + 10, sb.indexOf("\" alt=\"poster\"",fs + 10));
+			if (thumb.startsWith("//")) {
+				thumb = thumb.replaceFirst("//", "http://");
+			}
+			if (thumb.contains("poster-free.png")) {
+				thumb = null;
+			}
 		}
 		return thumb;
 	}
